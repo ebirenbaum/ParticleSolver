@@ -27,7 +27,7 @@
 #define DQ_P .2
 
 // Fluid-solid coupling constant
-#define S_SOLID .5
+#define S_SOLID 0.
 
 #include "particle.h"
 
@@ -37,9 +37,7 @@ public:
     TotalFluidConstraint(double density, QList<int> *particles);
     virtual ~TotalFluidConstraint();
 
-    inline ConstraintGroup getGroup() const { return STANDARD; }
-
-    void project(QList<Particle *> *estimates);
+    void project(QList<Particle *> *estimates, int *counts);
     void draw(QList<Particle *> *particles);
 
     double evaluate(QList<Particle *> *estimates);

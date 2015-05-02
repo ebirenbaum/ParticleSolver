@@ -11,7 +11,7 @@ BoundaryConstraint::~BoundaryConstraint()
 
 }
 
-void BoundaryConstraint::project(QList<Particle *> *estimates)
+void BoundaryConstraint::project(QList<Particle *> *estimates, int *counts)
 {
     Particle *p = estimates->at(idx);
 
@@ -72,7 +72,7 @@ void BoundaryConstraint::project(QList<Particle *> *estimates)
     }
 
     // Apply friction - boundaries have a coefficient of friction of 1
-    glm::dvec2 dp = (p->ep - p->p),
+    glm::dvec2 dp = (p->ep - p->p) / (double)counts[idx],
                dpt = dp - glm::dot(dp, n) * n;
     double ldpt = glm::length(dpt);
 

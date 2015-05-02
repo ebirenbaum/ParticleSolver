@@ -10,6 +10,7 @@
 
 Simulation::Simulation()
 {
+    m_counts = NULL;
     init(FRICTION_TEST);
     debug = true;
 }
@@ -44,6 +45,10 @@ void Simulation::clear() {
             }
         }
     }
+
+    if (m_counts) {
+        delete[] m_counts;
+    }
 }
 
 void Simulation::init(SimulationType type)
@@ -64,18 +69,24 @@ void Simulation::init(SimulationType type)
         initWall(); break;
     case PENDULUM_TEST:
         initPendulum(); break;
+    case ROPE_TEST:
+        initRope(); break;
     case FLUID_TEST:
         initFluid(); break;
     case FLUID_SOLID_TEST:
         initFluidSolid(); break;
     case GAS_TEST:
         initGas(); break;
+    case WATER_BALLOON_TEST:
+        initWaterBalloon(); break;
     default:
         initBoxes(); break;
     }
 
     // Set up the M^-1 matrix
     m_standardSolver.setupM(&m_particles);
+
+    m_counts = new int[m_particles.size()];
 }
 
 // (#) in the main simulation loop refer to lines from the main loop in the paper
@@ -111,8 +122,9 @@ void Simulation::tick(double seconds)
         if(p->ph == GAS) myGravity *= ALPHA;
         p->v = p->v + seconds * myGravity;
 
-        // (3) Predict positions
+        // (3) Predict positions, reset n
         p->ep = p->guess(seconds);
+        m_counts[i] = 0;
 
         // (4) Apply mass scaling (used by certain constraints)
         p->scaleMass();
@@ -146,7 +158,7 @@ void Simulation::tick(double seconds)
                     if (p->ph == SOLID && p2->ph == SOLID) {
                         constraints[CONTACT].append(new RigidContactConstraint(i, j, &m_bodies));
 #ifdef USE_STABILIZATION
-                        constraints[STABILIZATION].append(new RigidContactConstraint(i, j, &m_bodies));
+                        constraints[STABILIZATION].append(new RigidContactConstraint(i, j, &m_bodies, true));
 #endif
                     // Regular contact constraints (which have no friction) apply to other solid-other contact
                     } else if (p->ph == SOLID || p2->ph == SOLID) {
@@ -193,7 +205,7 @@ void Simulation::tick(double seconds)
 #ifdef ITERATIVE
         // (11, 12, 13, 14) Solve contact constraints and update p, ep, and n
         for (int k = 0; k < constraints[STABILIZATION].size(); k++) {
-            constraints[STABILIZATION].at(k)->project(&m_particles);
+            constraints[STABILIZATION].at(k)->project(&m_particles, m_counts);
         }
 #else
         // (11, 12, 13, 14) Solve contact constraints and update p, ep, and n
@@ -209,6 +221,21 @@ void Simulation::tick(double seconds)
 
 #endif
 
+    // (17) For constraint group
+    for (int j = 0; j < (int) NUM_CONSTRAINT_GROUPS; j++) {
+        ConstraintGroup g = (ConstraintGroup) j;
+
+        // Skip the stabilization constraints
+        if (g == STABILIZATION) {
+            continue;
+        }
+
+        //  (18, 19, 20) Update n based on constraints in g
+        for (int k = 0; k < constraints[g].size(); k++) {
+            constraints[g].at(k)->updateCounts(m_counts);
+        }
+    }
+
 #ifdef ITERATIVE
 
     // (16) For solver iterations
@@ -223,9 +250,9 @@ void Simulation::tick(double seconds)
                 continue;
             }
 
-            //  (18, 19, 20) Solve constraints in g and update ep and n
+            //  (18, 19, 20) Solve constraints in g and update ep
             for (int k = 0; k < constraints[g].size(); k++) {
-                constraints[g].at(k)->project(&m_particles);
+                constraints[g].at(k)->project(&m_particles, m_counts);
             }
         }
     }
@@ -249,7 +276,7 @@ void Simulation::tick(double seconds)
 
         if (constraints[SHAPE].size() > 0) {
             for (int j = 0; j < constraints[SHAPE].size(); j++) {
-                constraints[SHAPE][j]->project(&m_particles);
+                constraints[SHAPE][j]->project(&m_particles, m_counts);
             }
         }
         // (21) End for
@@ -435,7 +462,7 @@ void Simulation::drawParticles()
         } else if (p->ph == FLUID || p->ph == GAS){
             glColor3f(0,p->bod / 100., 1-p->bod / 100.);
         } else if (p->ph == SOLID) {
-            glColor3f(.8,.4,.3);
+            glColor3f(.4,.4,.3);
         } else {
             glColor3f(0,0,1);
         }
@@ -443,6 +470,7 @@ void Simulation::drawParticles()
         glPushMatrix();
         glTranslatef(p->p.x, p->p.y, 0);
         glScalef(PARTICLE_RAD, PARTICLE_RAD, 0);
+//        if (p->ph == FLUID) glScalef(3,3,0);
         drawCircle();
         glPopMatrix();
     }
@@ -530,7 +558,7 @@ void Simulation::initGranular()
         }
     }
 
-    Particle *jerk = new Particle(glm::dvec2(-5.51, 4), 100.f, SOLID);
+    Particle *jerk = new Particle(glm::dvec2(-5.55, 4), 100.f, SOLID);
     jerk->v.x = 10;
     m_particles.append(jerk);
 }
@@ -644,6 +672,44 @@ void Simulation::initPendulum()
     m_globalConstraints[STANDARD].append(new DistanceConstraint(0, 4, &m_particles));
 }
 
+void Simulation::initRope()
+{
+    double scale = 5.;
+    m_xBoundaries = glm::dvec2(-scale,scale);
+    m_yBoundaries = glm::dvec2(0,1000000);
+
+    double top = 6, dist = PARTICLE_RAD;
+
+    Particle *e1 = new Particle(glm::dvec2(m_xBoundaries.x, top), 0, SOLID);
+    e1->bod = -2;
+    m_particles.append(e1);
+
+    for (double i = m_xBoundaries.x + dist; i < m_xBoundaries.y - dist; i += dist) {
+        Particle *part = new Particle(glm::dvec2(i, top), 1., SOLID);
+        part->bod = -2;
+        m_particles.append(part);
+        m_globalConstraints[STANDARD].append(
+                    new DistanceConstraint(dist, m_particles.size() - 2, m_particles.size() - 1));
+    }
+
+    Particle *e2 = new Particle(glm::dvec2(m_xBoundaries.y, top), 0, SOLID);
+    e2->bod = -2;
+    m_particles.append(e2);
+
+    m_globalConstraints[STANDARD].append(
+                new DistanceConstraint(dist, m_particles.size() - 2, m_particles.size() - 1));
+
+    double delta = .7;
+    QList<Particle *> particles;
+
+    for(double x = -scale; x < scale; x += delta) {
+        for(double y = 10; y < 10 + scale; y += delta) {
+            particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+        }
+    }
+    createFluid(&particles, 1.75);
+}
+
 void Simulation::initFluid()
 {
     double scale = 4., delta = .7;
@@ -660,21 +726,14 @@ void Simulation::initFluid()
                 particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
             }
         }
-        createFluid(&particles, 1 + 1.5 * d);
+        createFluid(&particles, 1 + .75 * d);
         particles.clear();
     }
-
-//    for (int x = -1; x <=1; x++) {
-//        for (int y = 1; y <= 3; y++) {
-//            particles.append(new Particle(glm::dvec2(x,y), 1., LIQUID));
-//        }
-//    }
-//    createTotalFluid(&particles, 1.5);
 }
 
 void Simulation::initFluidSolid()
 {
-    double scale = 5., delta = .7;
+    double scale = 3., delta = .7;
     m_gravity = glm::dvec2(0, -9.8);
     m_xBoundaries = glm::dvec2(-2 * scale,2 * scale);
     m_yBoundaries = glm::dvec2(-2 * scale, 10 * scale);
@@ -773,7 +832,64 @@ void Simulation::initGas()
         createFluid(&particles, 4. + .75 * (d + 1));
         particles.clear();
     }
+}
 
+void Simulation::initWaterBalloon()
+{
+    double scale = 10.;
+    m_xBoundaries = glm::dvec2(-scale,scale);
+    m_yBoundaries = glm::dvec2(-10,1000000);
+
+    double samples = 60, da = 360. / samples;
+
+    for (int i = 0; i < samples; i++) {
+        double angle = D2R(i * da);
+        Particle *part = new Particle(glm::dvec2(sin(angle), cos(angle)) * 3., 1);
+        part->bod = -2;
+        int idx = m_particles.size();
+        m_particles.append(part);
+
+        if (i > 0) {
+            m_globalConstraints[STANDARD].append(
+                        new DistanceConstraint(idx, idx - 1, &m_particles));
+        }
+    }
+    m_globalConstraints[STANDARD].append(
+                new DistanceConstraint(0, m_particles.size() - 1, &m_particles));
+    int idk = m_particles.size();
+
+    for (int i = 0; i < samples; i++) {
+        double angle = D2R(i * da);
+        Particle *part = new Particle(glm::dvec2(sin(angle), cos(angle) + 3) * 3., 1);
+        part->bod = -3;
+        int idx = m_particles.size();
+        m_particles.append(part);
+
+        if (i > 0) {
+            m_globalConstraints[STANDARD].append(
+                        new DistanceConstraint(idx, idx - 1, &m_particles));
+        }
+    }
+    m_globalConstraints[STANDARD].append(
+                new DistanceConstraint(idk, m_particles.size() - 1, &m_particles));
+
+    double delta = 1.5 * PARTICLE_RAD;
+    QList<Particle *> particles;
+
+    for(double x = -2; x <= 2; x += delta) {
+        for(double y = -2; y <= 2; y += delta) {
+            particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+        }
+    }
+    createFluid(&particles, 1.75);
+
+    particles.clear();
+    for(double x = -2; x <= 2; x += delta) {
+        for(double y = -2; y <= 2; y += delta) {
+            particles.append(new Particle(glm::dvec2(x,y + 9) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+        }
+    }
+    createFluid(&particles, 1.75);
 }
 
 int Simulation::getNumParticles()

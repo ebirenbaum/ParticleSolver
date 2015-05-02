@@ -13,7 +13,7 @@
 
 // Use stabilization pass or not, and if so how many iterations
 //#define USE_STABILIZATION
-#define STABILIZATION_ITERATIONS 1
+#define STABILIZATION_ITERATIONS 2
 
 // Gravity scaling factor for gases
 #define ALPHA .3
@@ -25,9 +25,11 @@ enum SimulationType {
     STACKS_TEST,
     WALL_TEST,
     PENDULUM_TEST,
+    ROPE_TEST,
     FLUID_TEST,
     FLUID_SOLID_TEST,
     GAS_TEST,
+    WATER_BALLOON_TEST,
     NUM_SIMULATION_TYPES
 };
 
@@ -44,10 +46,12 @@ public:
     void initGranular();
     void initBoxes();
     void initPendulum();
+    void initRope();
     void initFluid();
     void initFluidSolid();
     void initWall();
     void initGas();
+    void initWaterBalloon();
 
     // Basic interaction events
     void tick(double seconds);
@@ -76,6 +80,9 @@ private:
     void drawBodies();
     void drawGlobals();
     void drawCircle();
+
+    // Counts for iterative particle solver
+    int *m_counts;
 
     // Storage of global particles, rigid bodies, and general constraints
     QList<Particle *> m_particles;

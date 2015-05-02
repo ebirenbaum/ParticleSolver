@@ -11,7 +11,7 @@ public:
     DistanceConstraint(int first, int second, QList<Particle *> *particles);
     virtual ~DistanceConstraint();
 
-    void project(QList<Particle *> *estimates);
+    void project(QList<Particle *> *estimates, int *counts);
     void draw(QList<Particle *> *particles);
 
     double evaluate(QList<Particle *> *estimates);

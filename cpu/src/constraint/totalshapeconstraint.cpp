@@ -11,7 +11,7 @@ TotalShapeConstraint::~TotalShapeConstraint()
 
 }
 
-void TotalShapeConstraint::project(QList<Particle *> *estimates)
+void TotalShapeConstraint::project(QList<Particle *> *estimates, int *counts)
 {
     body->updateCOM(estimates);
 

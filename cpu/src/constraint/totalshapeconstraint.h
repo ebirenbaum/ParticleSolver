@@ -9,7 +9,7 @@ public:
     TotalShapeConstraint(Body *bod, double stiff = 1.0);
     virtual ~TotalShapeConstraint();
 
-    void project(QList<Particle *> *estimates);
+    void project(QList<Particle *> *estimates, int *counts);
     void draw(QList<Particle *> *particles);
 
     double evaluate(QList<Particle *> *estimates);

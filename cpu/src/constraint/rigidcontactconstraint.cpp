@@ -25,7 +25,7 @@ void RigidContactConstraint::initBoundary(Particle *p1, Particle *p2)
     }
 }
 
-void RigidContactConstraint::project(QList<Particle *> *estimates)
+void RigidContactConstraint::project(QList<Particle *> *estimates, int *counts)
 {
     Particle *p1 = estimates->at(i1), *p2 = estimates->at(i2);
     SDFData dat1 = p1->getSDFData(bods, i1), dat2 = p2->getSDFData(bods, i2);
@@ -52,8 +52,8 @@ void RigidContactConstraint::project(QList<Particle *> *estimates)
 
     double wSum = p1->tmass + p2->tmass;
     glm::dvec2 dp = -(1.0 / wSum) * d * n,
-              dp1 = -p1->tmass * dp,
-              dp2 = p2->tmass * dp;
+              dp1 = -p1->tmass * dp  / (double)counts[i1],
+              dp2 = p2->tmass * dp / (double)   counts[i2];
 
     p1->ep += dp1;
     p2->ep += dp2;
@@ -63,7 +63,7 @@ void RigidContactConstraint::project(QList<Particle *> *estimates)
         p2->p += dp2;
     }
 
-    // Apply friction!
+    // Apply friction
     glm::dvec2 nf = glm::normalize(n);
     glm::dvec2 dpf = (p1->ep - p1->p) - (p2->ep - p2->p),
                dpt = dpf - glm::dot(dpf, nf) * nf;

@@ -140,16 +140,22 @@ void View::keyPressEvent(QKeyEvent *event)
         current = PENDULUM_TEST;
         sim.init(current);
     } else if (event->key() == Qt::Key_5) {
-        current = FLUID_TEST;
+        current = ROPE_TEST;
         sim.init(current);
     } else if (event->key() == Qt::Key_6) {
-        current = FLUID_SOLID_TEST;
+        current = FLUID_TEST;
         sim.init(current);
     } else if (event->key() == Qt::Key_7) {
-        current = GAS_TEST;
+        current = FLUID_SOLID_TEST;
         sim.init(current);
     } else if (event->key() == Qt::Key_8) {
+        current = GAS_TEST;
+        sim.init(current);
+    } else if (event->key() == Qt::Key_9) {
         current = FRICTION_TEST;
+        sim.init(current);
+    } else if (event->key() == Qt::Key_0) {
+        current = WATER_BALLOON_TEST;
         sim.init(current);
     }
 }

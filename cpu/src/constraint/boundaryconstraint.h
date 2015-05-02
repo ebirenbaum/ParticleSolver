@@ -10,7 +10,7 @@ public:
     BoundaryConstraint(int index, double val, bool xBoundary, bool greater, bool st = false);
     virtual ~BoundaryConstraint();
 
-    void project(QList<Particle *> *estimates);
+    void project(QList<Particle *> *estimates, int *counts);
     void draw(QList<Particle *> *particles);
 
     double evaluate(QList<Particle *> *estimates);

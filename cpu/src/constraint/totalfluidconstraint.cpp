@@ -16,7 +16,7 @@ TotalFluidConstraint::~TotalFluidConstraint()
     delete[] neighbors;
 }
 
-void TotalFluidConstraint::project(QList<Particle *> *estimates)
+void TotalFluidConstraint::project(QList<Particle *> *estimates, int *counts)
 {
     // Find neighboring particles and estimate pi for each particle
     lambdas.clear();
@@ -32,6 +32,9 @@ void TotalFluidConstraint::project(QList<Particle *> *estimates)
             // Check if the next particle is actually this particle
             if (j != i) {
                 Particle *p_j = estimates->at(j);
+
+                // Ignore fixed particles
+                if (p_j->imass == 0) continue;
                 glm::dvec2 r = p_i->ep - p_j->ep;
                 double rlen2 = glm::dot(r, r);
                 if (rlen2 < H2) {
@@ -86,7 +89,7 @@ void TotalFluidConstraint::project(QList<Particle *> *estimates)
     for (int k = 0; k < ps.size(); k++) {
         int i = ps[k];
         Particle *p_i = estimates->at(i);
-        p_i->ep += deltas[k] / (double) neighbors[k].size();
+        p_i->ep += deltas[k] / ((double) neighbors[k].size() + counts[i]);
     }
 }
 
@@ -123,9 +126,10 @@ glm::dvec2 TotalFluidConstraint::grad(QList<Particle *> *estimates, int k, int j
 
     glm::dvec2 out = glm::dvec2();
     for (int x = 0; x < neighbors[k].size(); x++) {
-        r = p_i->ep - estimates->at(neighbors[k][x])->ep;
+        Particle *p_j = estimates->at(neighbors[k][x]);
+        r = p_i->ep - p_j->ep;
         rlen = glm::length(r);
-        out += spikyGrad(r, rlen);
+        out += (p_j->ph == SOLID ? S_SOLID : 1.) * spikyGrad(r, rlen);
     }
 
     return out / (p0);
@@ -145,10 +149,4 @@ glm::dvec2 TotalFluidConstraint::gradient(QList<Particle *> *estimates, int resp
 
 void TotalFluidConstraint::updateCounts(int *counts)
 {
-    std::cout << "You shouldn't be calling update counts on fluids yet" << std::endl;
-    exit(1);
-//    for(int i = 0; i < numParticles; i++) {
-//        Particle *p = particles[i];
-//    }
-//    counts[idx]++;
 }

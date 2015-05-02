@@ -10,7 +10,7 @@ public:
     ContactConstraint(int first, int second, bool st = false);
     virtual ~ContactConstraint();
 
-    void project(QList<Particle *> *estimates);
+    void project(QList<Particle *> *estimates, int *counts);
     void draw(QList<Particle *> *particles);
 
     double evaluate(QList<Particle *> *estimates);

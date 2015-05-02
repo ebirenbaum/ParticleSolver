@@ -17,7 +17,7 @@ DistanceConstraint::~DistanceConstraint()
 
 }
 
-void DistanceConstraint::project(QList<Particle *> *estimates)
+void DistanceConstraint::project(QList<Particle *> *estimates, int *counts)
 {
     Particle *p1 = estimates->at(i1), *p2 = estimates->at(i2);
 
@@ -32,8 +32,8 @@ void DistanceConstraint::project(QList<Particle *> *estimates)
             scale = mag / wSum;
 
     glm::dvec2 dp = (scale / dist) * diff,
-              dp1 = -p1->imass * dp,
-              dp2 = p2->imass * dp;
+              dp1 = -p1->imass * dp / (double)counts[i1],
+              dp2 = p2->imass * dp / (double)counts[i2];
 
     p1->ep += dp1;
     p2->ep += dp2;

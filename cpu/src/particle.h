@@ -109,7 +109,7 @@ public:
     virtual void draw(QList<Particle *> *particles) = 0;
 
     // For iterative solving of constraints
-    virtual void project(QList<Particle *> *estimates) = 0;
+    virtual void project(QList<Particle *> *estimates, int *counts) = 0;
 
     // For matrix-oriented solving of constraints
     virtual double evaluate(QList<Particle *> *estimates) = 0;

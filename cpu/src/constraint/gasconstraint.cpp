@@ -16,7 +16,7 @@ GasConstraint::~GasConstraint()
     delete[] neighbors;
 }
 
-void GasConstraint::project(QList<Particle *> *estimates)
+void GasConstraint::project(QList<Particle *> *estimates, int *counts)
 {
     // Find neighboring particles and estimate pi for each particle
     lambdas.clear();
@@ -88,7 +88,7 @@ void GasConstraint::project(QList<Particle *> *estimates)
     for (int k = 0; k < ps.size(); k++) {
         int i = ps[k];
         Particle *p_i = estimates->at(i);
-        p_i->ep += deltas[k] / (double) neighbors[k].size();
+        p_i->ep += deltas[k] / ((double) neighbors[k].size() + counts[i]);
     }
 }
 
@@ -147,10 +147,4 @@ glm::dvec2 GasConstraint::gradient(QList<Particle *> *estimates, int respect)
 
 void GasConstraint::updateCounts(int *counts)
 {
-    std::cout << "You shouldn't be calling update counts on fluids yet" << std::endl;
-    exit(1);
-//    for(int i = 0; i < numParticles; i++) {
-//        Particle *p = particles[i];
-//    }
-//    counts[idx]++;
 }

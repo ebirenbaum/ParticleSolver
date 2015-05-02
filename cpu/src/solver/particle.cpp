@@ -2,7 +2,7 @@
 
 SDFData Particle::getSDFData(QList<Body *> *bodies, int idx)
 {
-    if (bod == -1) {
+    if (ph != SOLID || bod < 0) {
         return SDFData();
     }
 

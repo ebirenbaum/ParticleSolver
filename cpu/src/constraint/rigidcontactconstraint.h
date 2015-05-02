@@ -11,7 +11,7 @@ public:
 
     void initBoundary(Particle *p1, Particle *p2);
 
-    void project(QList<Particle *> *estimates);
+    void project(QList<Particle *> *estimates, int *counts);
     void draw(QList<Particle *> *particles);
 
     double evaluate(QList<Particle *> *estimates);

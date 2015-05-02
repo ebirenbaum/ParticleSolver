@@ -28,9 +28,7 @@ public:
     GasConstraint(double density, QList<int> *particles);
     virtual ~GasConstraint();
 
-    inline ConstraintGroup getGroup() const { return STANDARD; }
-
-    void project(QList<Particle *> *estimates);
+    void project(QList<Particle *> *estimates, int *counts);
     void draw(QList<Particle *> *particles);
 
     double evaluate(QList<Particle *> *estimates);
