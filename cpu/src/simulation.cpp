@@ -61,6 +61,8 @@ void Simulation::init(SimulationType type)
     switch (type) {
     case FRICTION_TEST:
         initFriction(); break;
+    case SDF_TEST:
+        initSdf(); break;
     case GRANULAR_TEST:
         initGranular(); break;
     case STACKS_TEST:
@@ -615,6 +617,38 @@ void Simulation::initGranular()
     Particle *jerk = new Particle(glm::dvec2(-25.55, 40), 100.f, SOLID);
     jerk->v.x = 10;
     m_particles.append(jerk);
+}
+
+void Simulation::initSdf()
+{
+    m_xBoundaries = glm::dvec2(-20,20);
+    m_yBoundaries = glm::dvec2(0,1000000);
+
+    int numBoxes = 2;
+    double root2 = sqrt(2);
+    QList<Particle *> vertices;
+    QList<SDFData> data;
+    data.append(SDFData(glm::normalize(glm::dvec2(-1,-1)), PARTICLE_RAD * root2));
+    data.append(SDFData(glm::normalize(glm::dvec2(-1,0)), PARTICLE_RAD));
+    data.append(SDFData(glm::normalize(glm::dvec2(-1,1)), PARTICLE_RAD * root2));
+    data.append(SDFData(glm::normalize(glm::dvec2(1,-1)), PARTICLE_RAD * root2));
+    data.append(SDFData(glm::normalize(glm::dvec2(1,0)), PARTICLE_RAD));
+    data.append(SDFData(glm::normalize(glm::dvec2(1,1)), PARTICLE_RAD * root2));
+
+    glm::ivec2 dim = glm::ivec2(2,3);
+    for (int i = numBoxes - 1; i >= 0; i--) {
+        for (int x = 0; x < dim.x; x++) {
+            double xVal = PARTICLE_DIAM * ((x % dim.x) - dim.x / 2) + i * PARTICLE_RAD;
+            for (int y = 0; y < dim.y; y++) {
+                double yVal = ((40 * i) * dim.y + (y % dim.y) + 1) * PARTICLE_DIAM;
+                Particle *part = new Particle(glm::dvec2(xVal, yVal), 4.);
+                if (i > 0) part->v.y = -120;
+                vertices.append(part);
+            }
+        }
+        Body *body = createRigidBody(&vertices, &data);
+        vertices.clear();
+    }
 }
 
 void Simulation::initBoxes()

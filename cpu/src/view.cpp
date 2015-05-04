@@ -160,6 +160,9 @@ void View::keyPressEvent(QKeyEvent *event)
     } else if (event->key() == Qt::Key_N) {
         current = CRADLE_TEST;
         sim.init(current);
+    } else if (event->key() == Qt::Key_Period) {
+        current = SDF_TEST;
+        sim.init(current);
     }
 }
 
