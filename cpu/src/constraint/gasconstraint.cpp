@@ -1,10 +1,12 @@
 #include "gasconstraint.h"
 
-GasConstraint::GasConstraint(double density, QList<int> *particles)
-    : Constraint(), p0(density)
+GasConstraint::GasConstraint(double density, QList<int> *particles, bool open)
+    : Constraint(), p0(density), m_open(open)
 {
     neighbors = new QList<int>[particles->size()];
     deltas = new glm::dvec2[particles->size()];
+
+    numParticles = particles->size();
 
     for (int i = 0; i < particles->size(); i++) {
         ps.append(particles->at(i));
@@ -14,6 +16,15 @@ GasConstraint::GasConstraint(double density, QList<int> *particles)
 GasConstraint::~GasConstraint()
 {
     delete[] neighbors;
+}
+
+void GasConstraint::addParticle(Particle *p, int index) {
+    delete[] neighbors;
+    delete[] deltas;
+    numParticles++;
+    neighbors = new QList<int>[numParticles];
+    deltas = new glm::dvec2[numParticles];
+    ps.append(index);
 }
 
 void GasConstraint::project(QList<Particle *> *estimates, int *counts)
@@ -26,7 +37,7 @@ void GasConstraint::project(QList<Particle *> *estimates, int *counts)
         Particle *p_i = estimates->at(i);
         double pi = 0., denom = 0.;
 
-        // Find neighbors
+        // Find neighbors and calculate forces
         for (int j = 0; j < estimates->size(); j++) {
 
             // Check if the next particle is actually this particle
@@ -61,7 +72,8 @@ void GasConstraint::project(QList<Particle *> *estimates, int *counts)
         // Compute the gamma value
 //        cout << i << " estimated " << pi << endl;
         double p_rat = (pi/p0);
-        if(p_rat < 1) p_rat = 1;
+        if(m_open) p_i->f += p_i->v * (1.-p_rat) * -50.;
+//        if(p_rat < 1) p_rat = 1;
         double lambda = -(p_rat - 1.) / (denom + RELAXATION);
         lambdas[i] = lambda;
     }
@@ -69,6 +81,7 @@ void GasConstraint::project(QList<Particle *> *estimates, int *counts)
     // Compute actual deltas
     for (int k = 0; k < ps.size(); k++) {
         glm::dvec2 delta = glm::dvec2();
+        glm::dvec2 f_vort = glm::dvec2();
         int i = ps[k];
         Particle *p_i = estimates->at(i);
 
@@ -81,8 +94,15 @@ void GasConstraint::project(QList<Particle *> *estimates, int *counts)
             glm::dvec2 sg = spikyGrad(r, rlen);
             double lambdaCorr = -K_P * pow((poly6(rlen) / poly6(DQ_P * H)), E_P);
             delta += (lambdas[i] + lambdas[j] + lambdaCorr) * sg;
+
+            // vorticity
+            glm::dvec2 gradient = spikyGrad(r, glm::dot(r,r));
+            glm::dvec2 w = gradient * p_j->v;
+            glm::dvec3 cross = glm::cross(glm::dvec3(0,0,glm::length(w)), glm::dvec3(r.x, r.y, 0));
+            f_vort += glm::dvec2(cross.x, cross.y) * poly6(glm::dot(r,r));
         }
         deltas[k] = (delta / p0);
+        p_i->f += f_vort;
     }
 
     for (int k = 0; k < ps.size(); k++) {

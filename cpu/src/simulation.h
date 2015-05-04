@@ -3,6 +3,7 @@
 
 #include "includes.h"
 #include "particle.h"
+#include "opensmokeemitter.h"
 #include "solver.h"
 
 // Number of solver iterations per timestep
@@ -16,7 +17,7 @@
 #define STABILIZATION_ITERATIONS 2
 
 // Gravity scaling factor for gases
-#define ALPHA .3
+#define ALPHA .2
 
 // Built-in simulation scenes
 enum SimulationType {
@@ -32,7 +33,9 @@ enum SimulationType {
     GAS_TEST,
     WATER_BALLOON_TEST,
     CRADLE_TEST,
-    NUM_SIMULATION_TYPES
+    NUM_SIMULATION_TYPES,
+    SMOKE_OPEN_TEST,
+    SMOKE_CLOSED_TEST
 };
 
 // The basic simulation, implementing the "main solve loop" from the paper.
@@ -56,6 +59,8 @@ public:
     void initGas();
     void initWaterBalloon();
     void initNewtonsCradle();
+    void initSmokeOpen();
+    void initSmokeClosed();
 
     // Basic interaction events
     void tick(double seconds);
@@ -76,7 +81,8 @@ private:
     // Creation functions for different types of matter
     Body *createRigidBody(QList<Particle *> *verts, QList<SDFData> *sdfData);
     void createFluid(QList<Particle *> *particles, double density);
-    void createGas(QList<Particle *> *particles, double density);
+    GasConstraint *createGas(QList<Particle *> *particles, double density, bool open);
+    void createEmitter(glm::dvec2 posn, double particlesPerSec, GasConstraint *gs);
 
     // Simple drawing routines
     void drawGrid();
@@ -84,6 +90,7 @@ private:
     void drawBodies();
     void drawGlobals();
     void drawCircle();
+    void drawSmoke();
 
     void setColor(int body, float alpha);
 
@@ -93,6 +100,7 @@ private:
     // Storage of global particles, rigid bodies, and general constraints
     QList<Particle *> m_particles;
     QList<Body *> m_bodies;
+    QList<OpenSmokeEmitter *> m_emitters;
     QHash<ConstraintGroup, QList<Constraint *> > m_globalConstraints;
 
     // Solvers for regular and contact constraints
