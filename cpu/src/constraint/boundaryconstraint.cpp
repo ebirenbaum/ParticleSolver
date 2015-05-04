@@ -81,10 +81,10 @@ void BoundaryConstraint::project(QList<Particle *> *estimates, int *counts)
     }
 
     // Choose between static and kinetic friction
-    if (ldpt < p->sFriction * d) {
+    if (ldpt < sqrt(p->sFriction) * d) {
         p->ep -= dpt;
     } else {
-        p->ep -= dpt * min(p->kFriction * d / ldpt, 1.);
+        p->ep -= dpt * min(sqrt(p->kFriction )* d / ldpt, 1.);
     }
 }
 

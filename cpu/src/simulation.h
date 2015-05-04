@@ -22,6 +22,7 @@
 // Built-in simulation scenes
 enum SimulationType {
     FRICTION_TEST,
+    SDF_TEST,
     GRANULAR_TEST,
     STACKS_TEST,
     WALL_TEST,
@@ -47,6 +48,7 @@ public:
 
     // Initializers for test scenes
     void initFriction();
+    void initSdf();
     void initGranular();
     void initBoxes();
     void initPendulum();
