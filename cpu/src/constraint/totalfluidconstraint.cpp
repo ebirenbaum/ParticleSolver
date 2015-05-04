@@ -30,12 +30,12 @@ void TotalFluidConstraint::addParticle(int index) {
 void TotalFluidConstraint::removeParticle(int index) {
     delete[] neighbors;
     delete[] deltas;
-    if(ps.contains(index)) {
+//    if(ps.contains(index)) {
         numParticles--;
         neighbors = new QList<int>[numParticles];
         deltas = new glm::dvec2[numParticles];
-        ps.removeAll(index);
-    }
+        ps.removeAt(index);
+//    }
 }
 
 void TotalFluidConstraint::project(QList<Particle *> *estimates, int *counts)
