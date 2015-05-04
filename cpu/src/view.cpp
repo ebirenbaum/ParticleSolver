@@ -149,7 +149,7 @@ void View::keyPressEvent(QKeyEvent *event)
         current = FLUID_SOLID_TEST;
         sim.init(current);
     } else if (event->key() == Qt::Key_8) {
-        current = GAS_TEST;
+        current = GAS_ROPE_TEST;
         sim.init(current);
     } else if (event->key() == Qt::Key_9) {
         current = FRICTION_TEST;
@@ -168,6 +168,9 @@ void View::keyPressEvent(QKeyEvent *event)
         sim.init(current);
     } else if (event->key() == Qt::Key_Period) {
         current = SDF_TEST;
+        sim.init(current);
+    } else if (event->key() == Qt::Key_V) {
+        current = VOLCANO_TEST;
         sim.init(current);
     }
 }

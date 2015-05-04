@@ -26,9 +26,14 @@ void Simulation::clear() {
         m_particles.removeAt(i);
         delete(p);
     }
-    for(int i = m_emitters.size()-1; i >= 0; i--) {
-        OpenSmokeEmitter *p = m_emitters.at(i);
-        m_emitters.removeAt(i);
+    for(int i = m_smokeEmitters.size()-1; i >= 0; i--) {
+        OpenSmokeEmitter *p = m_smokeEmitters.at(i);
+        m_smokeEmitters.removeAt(i);
+        delete(p);
+    }
+    for(int i = m_fluidEmitters.size()-1; i >= 0; i--) {
+        FluidEmitter *p = m_fluidEmitters.at(i);
+        m_fluidEmitters.removeAt(i);
         delete(p);
     }
     for(int i = m_bodies.size()-1; i >= 0; i--) {
@@ -82,8 +87,8 @@ void Simulation::init(SimulationType type)
         initFluid(); break;
     case FLUID_SOLID_TEST:
         initFluidSolid(); break;
-    case GAS_TEST:
-        initGas(); break;
+    case GAS_ROPE_TEST:
+        initRopeGas(); break;
     case WATER_BALLOON_TEST:
         initWaterBalloon(); break;
     case CRADLE_TEST:
@@ -92,6 +97,8 @@ void Simulation::init(SimulationType type)
         initSmokeOpen(); break;
     case SMOKE_CLOSED_TEST:
         initSmokeClosed(); break;
+    case VOLCANO_TEST:
+        initVolcano(); break;
     default:
         initBoxes(); break;
     }
@@ -332,8 +339,9 @@ void Simulation::tick(double seconds)
         delete(c);
     }
 
-    for(OpenSmokeEmitter *e: m_emitters) {
-        e->tick(&m_particles, seconds);        // (8) Find solid boundary contacts
+    for(OpenSmokeEmitter *e: m_smokeEmitters) {
+        e->tick(&m_particles, seconds);
+        // (8) Find solid boundary contacts
         for(Particle *p: *(e->getParticles())) {
             if (p->p.x < m_xBoundaries.x) {
                 p->p.x = m_xBoundaries.x;
@@ -346,6 +354,9 @@ void Simulation::tick(double seconds)
                 p->p.y = m_yBoundaries.y;
             }
         }
+    }
+    for(FluidEmitter *e: m_fluidEmitters) {
+        e->tick(&m_particles, seconds);
     }
     delete[] m_counts;
     m_counts = new int[m_particles.size()];
@@ -411,7 +422,7 @@ GasConstraint *Simulation::createGas(QList<Particle *> *verts, double density, b
     return gs;
 }
 
-void Simulation::createFluid(QList<Particle *> *verts, double density)
+TotalFluidConstraint *Simulation::createFluid(QList<Particle *> *verts, double density)
 {
     int offset = m_particles.size();
     int bod = 100 * frand();
@@ -429,12 +440,18 @@ void Simulation::createFluid(QList<Particle *> *verts, double density)
         m_particles.append(p);
         indices.append(offset + i);
     }
-    m_globalConstraints[STANDARD].append(new TotalFluidConstraint(density, &indices));
+    TotalFluidConstraint *fs = new TotalFluidConstraint(density, &indices);
+    m_globalConstraints[STANDARD].append(fs);
+    return fs;
 }
 
-void Simulation::createEmitter(glm::dvec2 posn, double particlesPerSec, GasConstraint *gs)
+void Simulation::createSmokeEmitter(glm::dvec2 posn, double particlesPerSec, GasConstraint *gs)
 {
-    m_emitters.append(new OpenSmokeEmitter(posn, particlesPerSec, gs));
+    m_smokeEmitters.append(new OpenSmokeEmitter(posn, particlesPerSec, gs));
+}
+
+void Simulation::createFluidEmitter(glm::dvec2 posn, double particlesPerSec, TotalFluidConstraint *fs) {
+    m_fluidEmitters.append(new FluidEmitter(posn, particlesPerSec, fs));
 }
 
 void Simulation::draw()
@@ -587,8 +604,8 @@ void Simulation::drawSmoke()
     glColor3f(1,1,1);
     glBegin(GL_QUADS);
     double rad = PARTICLE_RAD/7.;
-    for (int i = 0; i < m_emitters.size(); i++) {
-        QList<Particle *> *particles = m_emitters.at(i)->getParticles();
+    for (int i = 0; i < m_smokeEmitters.size(); i++) {
+        QList<Particle *> *particles = m_smokeEmitters.at(i)->getParticles();
         for(int j = 0; j < particles->size(); j++) {
             Particle *p = particles->at(j);
             glVertex2d(p->p.x-rad, p->p.y-rad);
@@ -862,7 +879,7 @@ void Simulation::initRope()
             particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
         }
     }
-    createFluid(&particles, 1.75);
+    createGas(&particles, 1.75);
 }
 
 void Simulation::initFluid()
@@ -1070,7 +1087,7 @@ void Simulation::initNewtonsCradle()
 void Simulation::initSmokeOpen()
 {
     double scale = 2., delta = .63;
-    m_gravity = glm::dvec2(0, 9.8);
+    m_gravity = glm::dvec2(0, -9.8);
     m_xBoundaries = glm::dvec2(-3  * scale,3 * scale);
     m_yBoundaries = glm::dvec2(-2  * scale,100 * scale);
     QList<Particle *> particles;
@@ -1084,7 +1101,7 @@ void Simulation::initSmokeOpen()
     GasConstraint *gs = createGas(&particles, 1.5, true);
     particles.clear();
 
-    createEmitter(glm::dvec2(0,-2*scale+1), 15, gs);
+    createSmokeEmitter(glm::dvec2(0,-2*scale+1), 15, gs);
 }
 
 void Simulation::initSmokeClosed()
@@ -1104,7 +1121,76 @@ void Simulation::initSmokeClosed()
     GasConstraint *gs = createGas(&particles, 1.5, false);
     particles.clear();
 
-    createEmitter(glm::dvec2(0,-2*scale+1), 15, NULL);
+    createSmokeEmitter(glm::dvec2(0,-2*scale+1), 15, NULL);
+}
+
+void Simulation::initRopeGas()
+{
+    double scale = 2., delta = .63;
+    m_gravity = glm::dvec2(0, -9.8);
+    m_xBoundaries = glm::dvec2(-4  * scale,4 * scale);
+    m_yBoundaries = glm::dvec2(-2  * scale,100 * scale);
+
+    double top = 6, dist = PARTICLE_RAD;
+
+    Particle *e1 = new Particle(glm::dvec2(-2.*scale, top), 0, SOLID);
+    e1->bod = -2;
+    m_particles.append(e1);
+
+    for (double i = -2*scale + dist; i < 2*scale - dist; i += dist) {
+        Particle *part = new Particle(glm::dvec2(i, top), .2, SOLID);
+        part->bod = -2;
+        m_particles.append(part);
+        m_globalConstraints[STANDARD].append(
+                    new DistanceConstraint(dist, m_particles.size() - 2, m_particles.size() - 1));
+    }
+
+    Particle *e2 = new Particle(glm::dvec2(2*scale, top), 0, SOLID);
+    e2->bod = -2;
+    m_particles.append(e2);
+
+    m_globalConstraints[STANDARD].append(
+                new DistanceConstraint(dist, m_particles.size() - 2, m_particles.size() - 1));
+
+    QList<Particle *> particles;
+
+    double start = -.5 * scale;
+    for(double x = start; x < start + (1 * scale); x += delta) {
+        for(double y = -.5 * scale; y < .5 * scale; y += delta) {
+            particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+        }
+    }
+    GasConstraint *gs = createGas(&particles, 1.5, true);
+
+    createSmokeEmitter(glm::dvec2(0,0), 15, gs);
+    particles.clear();
+}
+
+void Simulation::initVolcano()
+{
+    double scale = 10., delta = .2;
+
+    for(double x = 1.; x <= scale; x+=delta) {
+        m_particles.append(new Particle(glm::dvec2(-x,scale-x), 0));
+        m_particles.append(new Particle(glm::dvec2(x,scale-x), 0));
+    }
+
+    m_gravity = glm::dvec2(0,-9.8);
+    m_xBoundaries = glm::dvec2(-2 * scale,2 * scale);
+    m_yBoundaries = glm::dvec2(0, 10 * scale);
+    QList<Particle *> particles;
+
+    delta = .7;
+    for(double y = 0.; y < scale-1.; y+=delta) {
+        for(double x = 0.; x < scale-y-1; x += delta) {
+            particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+            particles.append(new Particle(glm::dvec2(-x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+        }
+    }
+    TotalFluidConstraint *fs = createFluid(&particles, 1);
+    particles.clear();
+
+    createFluidEmitter(glm::dvec2(0,0), scale*4, fs);
 }
 
 int Simulation::getNumParticles()

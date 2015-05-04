@@ -5,6 +5,7 @@
 #include "particle.h"
 #include "opensmokeemitter.h"
 #include "solver.h"
+#include "fluidemitter.h"
 
 // Number of solver iterations per timestep
 #define SOLVER_ITERATIONS 3
@@ -17,7 +18,7 @@
 #define STABILIZATION_ITERATIONS 2
 
 // Gravity scaling factor for gases
-#define ALPHA .2
+#define ALPHA -.2
 
 // Built-in simulation scenes
 enum SimulationType {
@@ -30,12 +31,13 @@ enum SimulationType {
     ROPE_TEST,
     FLUID_TEST,
     FLUID_SOLID_TEST,
-    GAS_TEST,
+    GAS_ROPE_TEST,
     WATER_BALLOON_TEST,
     CRADLE_TEST,
     NUM_SIMULATION_TYPES,
     SMOKE_OPEN_TEST,
-    SMOKE_CLOSED_TEST
+    SMOKE_CLOSED_TEST,
+    VOLCANO_TEST
 };
 
 // The basic simulation, implementing the "main solve loop" from the paper.
@@ -61,6 +63,8 @@ public:
     void initNewtonsCradle();
     void initSmokeOpen();
     void initSmokeClosed();
+    void initRopeGas();
+    void initVolcano();
 
     // Basic interaction events
     void tick(double seconds);
@@ -80,9 +84,10 @@ private:
 
     // Creation functions for different types of matter
     Body *createRigidBody(QList<Particle *> *verts, QList<SDFData> *sdfData);
-    void createFluid(QList<Particle *> *particles, double density);
+    TotalFluidConstraint *createFluid(QList<Particle *> *particles, double density);
     GasConstraint *createGas(QList<Particle *> *particles, double density, bool open);
-    void createEmitter(glm::dvec2 posn, double particlesPerSec, GasConstraint *gs);
+    void createSmokeEmitter(glm::dvec2 posn, double particlesPerSec, GasConstraint *gs);
+    void createFluidEmitter(glm::dvec2 posn, double particlesPerSec, TotalFluidConstraint *fs);
 
     // Simple drawing routines
     void drawGrid();
@@ -100,7 +105,8 @@ private:
     // Storage of global particles, rigid bodies, and general constraints
     QList<Particle *> m_particles;
     QList<Body *> m_bodies;
-    QList<OpenSmokeEmitter *> m_emitters;
+    QList<OpenSmokeEmitter *> m_smokeEmitters;
+    QList<FluidEmitter *> m_fluidEmitters;
     QHash<ConstraintGroup, QList<Constraint *> > m_globalConstraints;
 
     // Solvers for regular and contact constraints
