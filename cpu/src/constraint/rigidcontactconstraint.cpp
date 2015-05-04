@@ -10,12 +10,12 @@ RigidContactConstraint::~RigidContactConstraint()
 {
 }
 
-void RigidContactConstraint::initBoundary(Particle *p1, Particle *p2)
+bool RigidContactConstraint::initBoundary(Particle *p1, Particle *p2)
 {
     glm::dvec2 x12 = p1->getP(stabile) - p2->getP(stabile);
     double len = glm::length(x12);
     d = PARTICLE_DIAM - len;
-    if (d < EPSILON) return;
+    if (d < EPSILON) return true;
     x12 = len > EPSILON ? x12 / len : glm::dvec2(0,1);
     double dp = glm::dot(x12, n);
     if (dp < 0) {
@@ -23,6 +23,7 @@ void RigidContactConstraint::initBoundary(Particle *p1, Particle *p2)
     } else {
         n = x12;
     }
+    return false;
 }
 
 void RigidContactConstraint::project(QList<Particle *> *estimates, int *counts)
@@ -46,7 +47,9 @@ void RigidContactConstraint::project(QList<Particle *> *estimates, int *counts)
         }
 
         if (d < PARTICLE_DIAM + EPSILON) {
-            initBoundary(p1, p2);
+            if (initBoundary(p1, p2)) {
+                return;
+            }
         }
     }
 

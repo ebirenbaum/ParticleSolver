@@ -744,7 +744,7 @@ void Simulation::initBoxes()
     m_xBoundaries = glm::dvec2(-20,20);
     m_yBoundaries = glm::dvec2(0,1000000);
 
-    int numBoxes = 7, numColumns = 2;
+    int numBoxes = 10, numColumns = 2;
     double root2 = sqrt(2);
     QList<Particle *> vertices;
     QList<SDFData> data;
@@ -836,7 +836,9 @@ void Simulation::initPendulum()
     for (int i = chainLength; i >= 0; i--) {
         for (int j = 0; j < 6; j++) {
             double y = ((i + 1) * 3 + (j % 2)) * PARTICLE_DIAM + 2;
-            vertices.append(new Particle(glm::dvec2(xs[j] * PARTICLE_DIAM, y), 1.));
+            Particle *part = new Particle(glm::dvec2(xs[j] * PARTICLE_DIAM, y), 1.);
+            part->v.x = 3;
+            vertices.append(part);
         }
         Body *body = createRigidBody(&vertices, &data);
         vertices.clear();
@@ -886,7 +888,7 @@ void Simulation::initRope()
             particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
         }
     }
-    createGas(&particles, 1.75);
+    createFluid(&particles, 1.75);
 }
 
 void Simulation::initFluid()

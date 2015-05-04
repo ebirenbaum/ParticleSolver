@@ -194,7 +194,7 @@ void View::tick()
             tickTime = 0.0;
         }
     } else {
-        sim.tick(.01f);
+        sim.tick(.01);
     }
 
     // Flag this view for repainting (Qt will call paintGL() soon after)
