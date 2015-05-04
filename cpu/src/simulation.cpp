@@ -11,7 +11,7 @@
 Simulation::Simulation()
 {
     m_counts = NULL;
-    init(CRADLE_TEST);
+    init(WRECKING_BALL);
     debug = true;
 }
 
@@ -99,6 +99,8 @@ void Simulation::init(SimulationType type)
         initSmokeClosed(); break;
     case VOLCANO_TEST:
         initVolcano(); break;
+    case WRECKING_BALL:
+        initWreckingBall(); break;
     default:
         initBoxes(); break;
     }
@@ -225,6 +227,25 @@ void Simulation::tick(double seconds)
 
     m_contactSolver.setupSizes(m_particles.size(), &constraints[STABILIZATION]);
 
+#ifdef ITERATIVE
+
+    // (17) For constraint group
+    for (int j = 0; j < (int) NUM_CONSTRAINT_GROUPS; j++) {
+        ConstraintGroup g = (ConstraintGroup) j;
+
+        // Skip the stabilization constraints
+        if (g == STABILIZATION) {
+            continue;
+        }
+
+        //  (18, 19, 20) Update n based on constraints in g
+        for (int k = 0; k < constraints[g].size(); k++) {
+            constraints[g].at(k)->updateCounts(m_counts);
+        }
+    }
+
+#endif
+
 #ifdef USE_STABILIZATION
 
     // (10) For stabilization iterations
@@ -248,21 +269,6 @@ void Simulation::tick(double seconds)
     // (15) End for
 
 #endif
-
-    // (17) For constraint group
-    for (int j = 0; j < (int) NUM_CONSTRAINT_GROUPS; j++) {
-        ConstraintGroup g = (ConstraintGroup) j;
-
-        // Skip the stabilization constraints
-        if (g == STABILIZATION) {
-            continue;
-        }
-
-        //  (18, 19, 20) Update n based on constraints in g
-        for (int k = 0; k < constraints[g].size(); k++) {
-            constraints[g].at(k)->updateCounts(m_counts);
-        }
-    }
 
 #ifdef ITERATIVE
 
@@ -687,8 +693,8 @@ void Simulation::initGranular()
     m_gravity = glm::dvec2(0,-9.8);
 
     for (int i = -15; i <= 15; i++) {
-        for (int j = 0; j < 40; j++) {
-            glm::dvec2 pos = glm::dvec2(i * (PARTICLE_DIAM + EPSILON), pow(j,1.05) * (PARTICLE_DIAM) + PARTICLE_RAD + m_yBoundaries.x);
+        for (int j = 0; j < 30; j++) {
+            glm::dvec2 pos = glm::dvec2(i * (PARTICLE_DIAM + EPSILON), pow(j,1) * (PARTICLE_DIAM) + PARTICLE_RAD + m_yBoundaries.x);
             Particle *part= new Particle(pos, 1, SOLID);
             part->sFriction = .35;
             part->kFriction = .3;
@@ -697,7 +703,7 @@ void Simulation::initGranular()
     }
 
     Particle *jerk = new Particle(glm::dvec2(-25.55, 40), 100.f, SOLID);
-    jerk->v.x = 10;
+    jerk->v.x = 8.5;
     m_particles.append(jerk);
 }
 
@@ -758,6 +764,7 @@ void Simulation::initBoxes()
                     double yVal = ((2 * i + 1) * dim.y + (y % dim.y) + 1) * PARTICLE_DIAM;
                     Particle *part = new Particle(glm::dvec2(xVal, yVal), 4.);
                     part->sFriction = 1.;
+                    part->kFriction = 1.;
                     vertices.append(part);
                 }
             }
@@ -797,7 +804,7 @@ void Simulation::initWall()
                     double yVal = (i * dim.y + (y % (int)dim.y) + EPSILON) * PARTICLE_DIAM + PARTICLE_RAD;
                     Particle *part = new Particle(glm::dvec2(xVal, yVal), 1.);
                     part->sFriction = 1;
-                    part->kFriction = .09;
+                    part->kFriction = 0;
                     vertices.append(part);
                 }
             }
@@ -1180,7 +1187,7 @@ void Simulation::initVolcano()
     m_yBoundaries = glm::dvec2(0, 10 * scale);
     QList<Particle *> particles;
 
-    delta = .7;
+    delta = .8;
     for(double y = 0.; y < scale-1.; y+=delta) {
         for(double x = 0.; x < scale-y-1; x += delta) {
             particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
@@ -1191,6 +1198,89 @@ void Simulation::initVolcano()
     particles.clear();
 
     createFluidEmitter(glm::dvec2(0,0), scale*4, fs);
+
+//    double top = scale-.5, dist = PARTICLE_RAD;
+
+//    Particle *e1 = new Particle(glm::dvec2(-1-dist, top), 0, SOLID);
+//    e1->bod = -2;
+//    m_particles.append(e1);
+
+//    for (double i = -1; i <= 2; i += dist) {
+//        Particle *part = new Particle(glm::dvec2(i, top), 1, SOLID);
+//        part->bod = -2;
+//        m_particles.append(part);
+//        m_globalConstraints[STANDARD].append(
+//                    new DistanceConstraint(dist, m_particles.size() - 2, m_particles.size() - 1));
+//    }
+}
+
+void Simulation::initWreckingBall()
+{
+    m_xBoundaries = glm::dvec2(-15,100);
+    m_yBoundaries = glm::dvec2(0,1000000);
+
+    glm::dvec2 dim = glm::dvec2(6,2);
+    int height = 8, width = 2;
+    double root2 = sqrt(2);
+    QList<Particle *> vertices;
+    QList<SDFData> data;
+    data.append(SDFData(glm::normalize(glm::dvec2(-1,-1)), PARTICLE_RAD * root2));
+    data.append(SDFData(glm::normalize(glm::dvec2(-1,1)), PARTICLE_RAD * root2));
+
+    for (int i = 0; i < dim.x - 2; i++) {
+        data.append(SDFData(glm::normalize(glm::dvec2(0,-1)), PARTICLE_RAD));
+        data.append(SDFData(glm::normalize(glm::dvec2(0,1)), PARTICLE_RAD));
+    }
+
+    data.append(SDFData(glm::normalize(glm::dvec2(1,-1)), PARTICLE_RAD * root2));
+    data.append(SDFData(glm::normalize(glm::dvec2(1,1)), PARTICLE_RAD * root2));
+
+    for (int j = -width; j <= width; j++) {
+        for (int i = height - 1; i >= 0; i--) {
+            for (int x = 0; x < dim.x; x++) {
+                double num = (i % 2 == 0 ? 3 : -1);
+                double xVal = j * (EPSILON + dim.x / 2.) + PARTICLE_DIAM * (x % (int)dim.x) - num * PARTICLE_RAD;
+                for (int y = 0; y < dim.y; y++) {
+                    double yVal = (i * dim.y + (y % (int)dim.y) + EPSILON) * PARTICLE_DIAM + PARTICLE_RAD;
+                    Particle *part = new Particle(glm::dvec2(xVal, yVal), 30.);
+                    part->sFriction = 1;
+                    part->kFriction = 1;
+                    vertices.append(part);
+                }
+            }
+            Body *body = createRigidBody(&vertices, &data);
+            vertices.clear();
+        }
+    }
+
+    double scale = 6., delta = .4;
+    QList<Particle *> particles;
+
+    double num = 1.;
+    double start = m_xBoundaries.x + 1;
+    for(double x = start; x < start + (scale / num); x += delta) {
+        for(double y = 0; y < 1.2 * scale; y += delta) {
+            particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+        }
+    }
+    createFluid(&particles, 2.5);
+    particles.clear();
+
+    int idx = m_particles.size();
+    m_particles.append(new Particle(glm::dvec2(10, 50), 0));
+    data.clear();
+
+    glm::dvec2 base = glm::dvec2(57, 50);
+    particles.append(new Particle(base, 1000));
+    for (double a = 0; a <= 360; a+=30) {
+        glm::dvec2 vec = glm::dvec2(cos(D2R(a)), sin(D2R(a)));
+        particles.append(new Particle(vec * PARTICLE_RAD + base, 1000));
+        data.append(SDFData(vec, PARTICLE_RAD * 1.5));
+    }
+    data.append(SDFData());
+    createRigidBody(&particles, &data);
+
+    m_globalConstraints[STANDARD].append(new DistanceConstraint(idx, idx + 1, &m_particles));
 }
 
 int Simulation::getNumParticles()

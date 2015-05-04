@@ -27,17 +27,19 @@ void OpenSmokeEmitter::tick(QList<Particle *> *estimates, double secs) {
         }
     }
     for(Particle *p: m_particles) {
-        p->v = glm::dvec2();
-        double sum = 0;
-        for(Particle *n: *estimates) {
-            glm::dvec2 r = p->p - n->p;
-            double p6 = poly6(glm::dot(r,r));
-            p->v += n->v * p6;
-            sum += p6;
-        }
+        if(p->ph == FLUID || p->ph == GAS) {
+            p->v = glm::dvec2();
+            double sum = 0;
+            for(Particle *n: *estimates) {
+                glm::dvec2 r = p->p - n->p;
+                double p6 = poly6(glm::dot(r,r));
+                p->v += n->v * p6;
+                sum += p6;
+            }
 
-        if(sum > 0)
-            p->p += p->v * secs / sum;
+            if(sum > 0)
+                p->p += p->v * secs / sum;
+        }
     }
 }
 

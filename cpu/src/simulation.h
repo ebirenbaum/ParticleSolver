@@ -37,7 +37,8 @@ enum SimulationType {
     NUM_SIMULATION_TYPES,
     SMOKE_OPEN_TEST,
     SMOKE_CLOSED_TEST,
-    VOLCANO_TEST
+    VOLCANO_TEST,
+    WRECKING_BALL
 };
 
 // The basic simulation, implementing the "main solve loop" from the paper.
@@ -65,6 +66,7 @@ public:
     void initSmokeClosed();
     void initRopeGas();
     void initVolcano();
+    void initWreckingBall();
 
     // Basic interaction events
     void tick(double seconds);

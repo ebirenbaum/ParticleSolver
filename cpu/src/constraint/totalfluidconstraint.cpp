@@ -6,6 +6,8 @@ TotalFluidConstraint::TotalFluidConstraint(double density, QList<int> *particles
     neighbors = new QList<int>[particles->size()];
     deltas = new glm::dvec2[particles->size()];
 
+    numParticles = particles->size();
+
     for (int i = 0; i < particles->size(); i++) {
         ps.append(particles->at(i));
     }
@@ -14,6 +16,26 @@ TotalFluidConstraint::TotalFluidConstraint(double density, QList<int> *particles
 TotalFluidConstraint::~TotalFluidConstraint()
 {
     delete[] neighbors;
+}
+
+void TotalFluidConstraint::addParticle(int index) {
+    delete[] neighbors;
+    delete[] deltas;
+    numParticles++;
+    neighbors = new QList<int>[numParticles];
+    deltas = new glm::dvec2[numParticles];
+    ps.append(index);
+}
+
+void TotalFluidConstraint::removeParticle(int index) {
+    delete[] neighbors;
+    delete[] deltas;
+    if(ps.contains(index)) {
+        numParticles--;
+        neighbors = new QList<int>[numParticles];
+        deltas = new glm::dvec2[numParticles];
+        ps.removeAll(index);
+    }
 }
 
 void TotalFluidConstraint::project(QList<Particle *> *estimates, int *counts)

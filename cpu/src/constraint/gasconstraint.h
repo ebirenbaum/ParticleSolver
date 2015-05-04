@@ -12,9 +12,9 @@
 #define RELAXATION .01
 
 // Pressure terms
-#define K_P .1
+#define K_P .2
 #define E_P 4
-#define DQ_P .1
+#define DQ_P .25
 
 // Fluid-solid coupling constant
 #define S_SOLID .5

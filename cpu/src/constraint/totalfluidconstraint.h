@@ -47,13 +47,17 @@ public:
     double poly6(double rlen);
     glm::dvec2 spikyGrad(const glm::dvec2 &r, double rlen);
     glm::dvec2 grad(QList<Particle *> *estimates, int k, int j);
+    void addParticle(int index);
+    void removeParticle(int i);
+
+    QList<int> *neighbors;
+    QList<int> ps;
+    double p0;
+    QHash<int, double> lambdas;
 
 private:
-    double p0;
-    QList<int> ps;
-    QList<int> *neighbors;
     glm::dvec2 *deltas;
-    QHash<int, double> lambdas;
+    int numParticles;
 };
 
 #endif // TOTALFLUIDCONSTRAINT_H

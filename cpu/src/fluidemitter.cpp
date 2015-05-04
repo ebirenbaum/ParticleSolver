@@ -12,24 +12,25 @@ FluidEmitter::~FluidEmitter() {
 
 void FluidEmitter::tick(QList<Particle *> *estimates, double secs) {
     for(int i = m_fs->ps.size()-1; i >= 0; i--) {
-        if(estimates->size() > m_fs->ps.at(i)) {
-            Particle *p = estimates->at(m_fs->ps.at(i));
-            std::cout << p << std::endl;
-            double lambda = m_fs->lambdas[i];
-            std::cout << lambda << std::endl;
-            if(lambda >= 0 && glm::length(p->v) < .2) {
-                Particle *newP = new Particle(p->p, 1, SOLID);
-                newP->v = p->v;
-                grains.append(newP);
-                estimates->append(newP);
-                estimates->removeAt(m_fs->ps.at(i));
-                m_fs->removeParticle(i);
-                delete p;
-//                p->imass = 1;
+            //            std::cout << p << std::endl;
+//            double lambda = m_fs->lambdas[i];
+            //            std::cout << lambda << std::endl;
+            //            if(lambda >= -.1 && glm::length(p->v) < .05 && glm::length(p->p - p->ep) < .05) {
+//            if(p->p.y >= 10 || fabs(p->p.x) >= 10 ) {
 //                p->ph = SOLID;
-//                m_fs->ps.removeAt(i);
-            }
-        }
+//                Particle *newP = new Particle(p->p, 1, SOLID);
+//                newP->v = p->v;
+//                grains.append(newP);
+//                estimates->append(newP);
+//                estimates->removeAt(i);
+//                if(m_fs->ps.contains(i))
+//                    m_fs->removeParticle(i);
+//                delete p;
+                //                p->imass = 1;
+                //                p->ph = SOLID;
+                //                m_fs->ps.removeAt(i);
+//            }
+//        }
     }
 
 

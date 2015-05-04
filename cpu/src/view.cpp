@@ -172,6 +172,9 @@ void View::keyPressEvent(QKeyEvent *event)
     } else if (event->key() == Qt::Key_V) {
         current = VOLCANO_TEST;
         sim.init(current);
+    } else if (event->key() == Qt::Key_W) {
+        current = WRECKING_BALL;
+        sim.init(current);
     }
 }
 
