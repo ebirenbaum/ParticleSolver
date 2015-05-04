@@ -14,7 +14,7 @@
 // Pressure terms
 #define K_P .1
 #define E_P 4
-#define DQ_P .3
+#define DQ_P .1
 
 // Fluid-solid coupling constant
 #define S_SOLID .5
@@ -25,7 +25,7 @@
 class GasConstraint : public Constraint
 {
 public:
-    GasConstraint(double density, QList<int> *particles);
+    GasConstraint(double density, QList<int> *particles, bool open);
     virtual ~GasConstraint();
 
     void project(QList<Particle *> *estimates, int *counts);
@@ -39,12 +39,16 @@ public:
     glm::dvec2 spikyGrad(const glm::dvec2 &r, double rlen);
     glm::dvec2 grad(QList<Particle *> *estimates, int k, int j);
 
+    void addParticle(Particle *p, int index);
+
 private:
     double p0;
     QList<int> ps;
     QList<int> *neighbors;
+    int numParticles;
     glm::dvec2 *deltas;
     QHash<int, double> lambdas;
+    bool m_open;
 };
 
 #endif // GASCONSTRAINT_H

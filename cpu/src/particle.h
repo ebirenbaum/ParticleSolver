@@ -20,7 +20,7 @@ struct SDFData;
 // Individual particle representation
 struct Particle
 {
-    glm::dvec2 p, ep, v; // position, guess position, and velocity
+    glm::dvec2 p, ep, v, f; // position, guess position, and velocity
     double imass, tmass, sFriction, kFriction; // inverse mass, temporary height-scaled mass, coeffs of friction
     int bod; // body (if any) this particle belongs to, for disabling collisions
     Phase ph; // phase of this particle
@@ -45,6 +45,7 @@ struct Particle
         }
         tmass = imass;
 
+        f = glm::dvec2();
         sFriction = 0;
         kFriction = 0; // usually smaller the coefficient of static friction
     }

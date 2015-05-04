@@ -28,7 +28,8 @@ SOURCES += src/main.cpp \
     src/constraint/contactconstraint.cpp \
     src/constraint/totalfluidconstraint.cpp \
     src/constraint/rigidcontactconstraint.cpp \
-    src/constraint/gasconstraint.cpp
+    src/constraint/gasconstraint.cpp \
+    src/opensmokeemitter.cpp
 
 HEADERS += src/mainwindow.h \
     src/view.h \
@@ -44,7 +45,8 @@ HEADERS += src/mainwindow.h \
     src/constraint/contactconstraint.h \
     src/constraint/totalfluidconstraint.h \
     src/constraint/rigidcontactconstraint.h \
-    src/constraint/gasconstraint.h
+    src/constraint/gasconstraint.h \
+    src/opensmokeemitter.h
 
 # UMFPACK
 INCLUDEPATH += $$PWD/lib/umfpack/include
