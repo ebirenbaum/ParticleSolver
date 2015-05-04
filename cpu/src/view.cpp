@@ -157,6 +157,9 @@ void View::keyPressEvent(QKeyEvent *event)
     } else if (event->key() == Qt::Key_0) {
         current = WATER_BALLOON_TEST;
         sim.init(current);
+    } else if (event->key() == Qt::Key_N) {
+        current = CRADLE_TEST;
+        sim.init(current);
     }
 }
 

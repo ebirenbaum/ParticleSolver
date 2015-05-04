@@ -131,8 +131,6 @@ struct Body
     glm::dvec2 center; // center of mass
     double imass, angle; // total inverse mass
 
-    void draw(QList<Particle *> *parts);
-
     void updateCOM(QList<Particle *> *estimates, bool useEstimates = true);
     void computeRs(QList<Particle *> *estimates);
 };

@@ -11,7 +11,7 @@
 Simulation::Simulation()
 {
     m_counts = NULL;
-    init(FRICTION_TEST);
+    init(CRADLE_TEST);
     debug = true;
 }
 
@@ -79,6 +79,8 @@ void Simulation::init(SimulationType type)
         initGas(); break;
     case WATER_BALLOON_TEST:
         initWaterBalloon(); break;
+    case CRADLE_TEST:
+        initNewtonsCradle(); break;
     default:
         initBoxes(); break;
     }
@@ -462,7 +464,7 @@ void Simulation::drawParticles()
         } else if (p->ph == FLUID || p->ph == GAS){
             glColor3f(0,p->bod / 100., 1-p->bod / 100.);
         } else if (p->ph == SOLID) {
-            glColor3f(.4,.4,.3);
+            setColor(p->bod, 1);
         } else {
             glColor3f(0,0,1);
         }
@@ -470,7 +472,6 @@ void Simulation::drawParticles()
         glPushMatrix();
         glTranslatef(p->p.x, p->p.y, 0);
         glScalef(PARTICLE_RAD, PARTICLE_RAD, 0);
-//        if (p->ph == FLUID) glScalef(3,3,0);
         drawCircle();
         glPopMatrix();
     }
@@ -485,7 +486,44 @@ void Simulation::drawBodies()
         if (debug) {
             b->shape->draw(&m_particles);
         } else {
-            b->draw(&m_particles);
+            for (int i = 0; i < b->particles.size(); i++) {
+                Particle *p = m_particles[(b->particles[i])];
+
+                glPushMatrix();
+                glTranslatef(p->p.x, p->p.y, 0);
+                glPushMatrix();
+                glRotatef(R2D(b->angle), 0, 0, 1);
+
+                glEnable(GL_BLEND);
+                setColor(p->bod, .6);
+                glBegin(GL_QUADS);
+                glVertex2f(-PARTICLE_RAD, -PARTICLE_RAD);
+                glVertex2f(-PARTICLE_RAD, PARTICLE_RAD);
+                glVertex2f(PARTICLE_RAD, PARTICLE_RAD);
+                glVertex2f(PARTICLE_RAD, -PARTICLE_RAD);
+                glEnd();
+                glDisable(GL_BLEND);
+
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                glBegin(GL_QUADS);
+                glVertex2f(-PARTICLE_RAD, -PARTICLE_RAD);
+                glVertex2f(-PARTICLE_RAD, PARTICLE_RAD);
+                glVertex2f(PARTICLE_RAD, PARTICLE_RAD);
+                glVertex2f(PARTICLE_RAD, -PARTICLE_RAD);
+                glEnd();
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+//                glColor3f(0,0,0);
+//                glPopMatrix();
+//                glm::dvec2 s = b->sdf[b->particles[i]].gradient * b->sdf[b->particles[i]].distance;
+//                s = glm::rotate(s, b->angle);
+//                glBegin(GL_LINES);
+//                glVertex2f(0,0);
+//                glVertex2f(s.x, s.y);
+//                glEnd();
+
+                glPopMatrix();
+            }
         }
     }
 }
@@ -496,6 +534,22 @@ void Simulation::drawGlobals()
         for (int j = 0; j < m_globalConstraints[(ConstraintGroup) i].size(); j++) {
             m_globalConstraints[(ConstraintGroup)i ][j]->draw(&m_particles);
         }
+    }
+}
+
+void Simulation::setColor(int body, float alpha)
+{
+    int choice = abs(body) % 5;
+    if (choice == 0) {
+        glColor4f(1,.7,0,alpha);
+    } else if (choice == 1) {
+        glColor4f(.35,.75,.95,alpha);
+    } else if (choice == 2) {
+        glColor4f(1,.55,.8,alpha);
+    } else if (choice == 3) {
+        glColor4f(.1,.85,.9,alpha);
+    } else {
+        glColor4f(.1,.9,.6,alpha);
     }
 }
 
@@ -549,16 +603,16 @@ void Simulation::initGranular()
     m_gravity = glm::dvec2(0,-9.8);
 
     for (int i = -10; i <= 10; i++) {
-        for (int j = 0; j < 40; j++) {
-            glm::dvec2 pos = glm::dvec2(i * (PARTICLE_DIAM + EPSILON), j * PARTICLE_DIAM + PARTICLE_RAD + m_yBoundaries.x);
+        for (int j = 0; j < 30; j++) {
+            glm::dvec2 pos = glm::dvec2(i * (PARTICLE_DIAM + EPSILON), pow(j,1.05) * (PARTICLE_DIAM) + PARTICLE_RAD + m_yBoundaries.x);
             Particle *part= new Particle(pos, 1, SOLID);
             part->sFriction = .1;
-            part->kFriction = .02;
+            part->kFriction = .0001;
             m_particles.append(part);
         }
     }
 
-    Particle *jerk = new Particle(glm::dvec2(-5.55, 4), 100.f, SOLID);
+    Particle *jerk = new Particle(glm::dvec2(-25.55, 40), 100.f, SOLID);
     jerk->v.x = 10;
     m_particles.append(jerk);
 }
@@ -597,11 +651,11 @@ void Simulation::initBoxes()
 
 void Simulation::initWall()
 {
-    m_xBoundaries = glm::dvec2(-20,20);
+    m_xBoundaries = glm::dvec2(-50,50);
     m_yBoundaries = glm::dvec2(0,1000000);
 
     glm::dvec2 dim = glm::dvec2(6,2);
-    int height = 5, width = 2;
+    int height = 9, width = 5;
     double root2 = sqrt(2);
     QList<Particle *> vertices;
     QList<SDFData> data;
@@ -892,6 +946,25 @@ void Simulation::initWaterBalloon()
     createFluid(&particles, 1.75);
 }
 
+void Simulation::initNewtonsCradle()
+{
+    m_xBoundaries = glm::dvec2(-10,10);
+    m_yBoundaries = glm::dvec2(-5,1000000);
+
+    int n = 2;
+
+    for (int i = -n; i <= n; i++) {
+        int idx = m_particles.size();
+        m_particles.append(new Particle(glm::dvec2(i * PARTICLE_DIAM, 0), 0.f));
+        if (i != -n) {
+            m_particles.append(new Particle(glm::dvec2(i * PARTICLE_DIAM, -3), 1.f));
+        } else {
+            Particle *part = new Particle(glm::dvec2(i * PARTICLE_DIAM - 3, 0), 1.f);
+            m_particles.append(part);
+        }
+        m_globalConstraints[STANDARD].append(new DistanceConstraint(idx, idx+1, &m_particles));
+    }
+}
 int Simulation::getNumParticles()
 {
     return m_particles.size();

@@ -30,6 +30,7 @@ enum SimulationType {
     FLUID_SOLID_TEST,
     GAS_TEST,
     WATER_BALLOON_TEST,
+    CRADLE_TEST,
     NUM_SIMULATION_TYPES
 };
 
@@ -52,6 +53,7 @@ public:
     void initWall();
     void initGas();
     void initWaterBalloon();
+    void initNewtonsCradle();
 
     // Basic interaction events
     void tick(double seconds);
@@ -80,6 +82,8 @@ private:
     void drawBodies();
     void drawGlobals();
     void drawCircle();
+
+    void setColor(int body, float alpha);
 
     // Counts for iterative particle solver
     int *m_counts;
