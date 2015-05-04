@@ -55,10 +55,10 @@ void RigidContactConstraint::project(QList<Particle *> *estimates, int *counts)
               dp1 = -p1->tmass * dp  / (double)counts[i1],
               dp2 = p2->tmass * dp / (double)counts[i2];
 
-    p1->ep += dp1;
-    p2->ep += dp2;
-
-    if (stabile) {
+    if (!stabile) {
+        p1->ep += dp1;
+        p2->ep += dp2;
+    } else {
         p1->p += dp1;
         p2->p += dp2;
     }
@@ -75,10 +75,18 @@ void RigidContactConstraint::project(QList<Particle *> *estimates, int *counts)
             kFric = sqrt(p1->kFriction * p2->kFriction);
 
     if (ldpt < sFric * d) {
+        if (stabile) {
+            p1->p -= dpt * p1->tmass / wSum;
+            p2->p += dpt * p2->tmass / wSum;
+        }
         p1->ep -= dpt * p1->tmass / wSum;
         p2->ep += dpt * p2->tmass / wSum;
     } else {
         glm::dvec2 delta = dpt * min(kFric * d / ldpt, 1.);
+        if (stabile) {
+            p1->p -= delta * p1->tmass / wSum;
+            p2->p += delta * p2->tmass / wSum;
+        }
         p1->ep -= delta * p1->tmass / wSum;
         p2->ep += delta * p2->tmass / wSum;
     }

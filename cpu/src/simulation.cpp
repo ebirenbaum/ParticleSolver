@@ -201,6 +201,25 @@ void Simulation::tick(double seconds)
 
     m_contactSolver.setupSizes(m_particles.size(), &constraints[STABILIZATION]);
 
+#ifdef ITERATIVE
+
+    // (17) For constraint group
+    for (int j = 0; j < (int) NUM_CONSTRAINT_GROUPS; j++) {
+        ConstraintGroup g = (ConstraintGroup) j;
+
+        // Skip the stabilization constraints
+        if (g == STABILIZATION) {
+            continue;
+        }
+
+        //  (18, 19, 20) Update n based on constraints in g
+        for (int k = 0; k < constraints[g].size(); k++) {
+            constraints[g].at(k)->updateCounts(m_counts);
+        }
+    }
+
+#endif
+
 #ifdef USE_STABILIZATION
 
     // (10) For stabilization iterations
@@ -224,21 +243,6 @@ void Simulation::tick(double seconds)
     // (15) End for
 
 #endif
-
-    // (17) For constraint group
-    for (int j = 0; j < (int) NUM_CONSTRAINT_GROUPS; j++) {
-        ConstraintGroup g = (ConstraintGroup) j;
-
-        // Skip the stabilization constraints
-        if (g == STABILIZATION) {
-            continue;
-        }
-
-        //  (18, 19, 20) Update n based on constraints in g
-        for (int k = 0; k < constraints[g].size(); k++) {
-            constraints[g].at(k)->updateCounts(m_counts);
-        }
-    }
 
 #ifdef ITERATIVE
 
@@ -605,8 +609,8 @@ void Simulation::initGranular()
     m_gravity = glm::dvec2(0,-9.8);
 
     for (int i = -15; i <= 15; i++) {
-        for (int j = 0; j < 40; j++) {
-            glm::dvec2 pos = glm::dvec2(i * (PARTICLE_DIAM + EPSILON), pow(j,1.05) * (PARTICLE_DIAM) + PARTICLE_RAD + m_yBoundaries.x);
+        for (int j = 0; j < 30; j++) {
+            glm::dvec2 pos = glm::dvec2(i * (PARTICLE_DIAM + EPSILON), pow(j,1) * (PARTICLE_DIAM) + PARTICLE_RAD + m_yBoundaries.x);
             Particle *part= new Particle(pos, 1, SOLID);
             part->sFriction = .35;
             part->kFriction = .3;
@@ -615,7 +619,7 @@ void Simulation::initGranular()
     }
 
     Particle *jerk = new Particle(glm::dvec2(-25.55, 40), 100.f, SOLID);
-    jerk->v.x = 10;
+    jerk->v.x = 8.5;
     m_particles.append(jerk);
 }
 
@@ -676,6 +680,7 @@ void Simulation::initBoxes()
                     double yVal = ((2 * i + 1) * dim.y + (y % dim.y) + 1) * PARTICLE_DIAM;
                     Particle *part = new Particle(glm::dvec2(xVal, yVal), 4.);
                     part->sFriction = 1.;
+                    part->kFriction = 1.;
                     vertices.append(part);
                 }
             }
@@ -715,7 +720,7 @@ void Simulation::initWall()
                     double yVal = (i * dim.y + (y % (int)dim.y) + EPSILON) * PARTICLE_DIAM + PARTICLE_RAD;
                     Particle *part = new Particle(glm::dvec2(xVal, yVal), 1.);
                     part->sFriction = 1;
-                    part->kFriction = .09;
+                    part->kFriction = 0;
                     vertices.append(part);
                 }
             }
