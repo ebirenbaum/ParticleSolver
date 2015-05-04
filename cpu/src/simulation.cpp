@@ -1138,23 +1138,23 @@ void Simulation::initRopeGas()
     m_xBoundaries = glm::dvec2(-4  * scale,4 * scale);
     m_yBoundaries = glm::dvec2(-2  * scale,100 * scale);
 
-    double top = 6, dist = PARTICLE_RAD;
+    double top = 12, dist = PARTICLE_RAD;
 
-    Particle *e1 = new Particle(glm::dvec2(-2.*scale, top), 0, SOLID);
+    Particle *e1 = new Particle(glm::dvec2(0, top), 0, SOLID);
     e1->bod = -2;
     m_particles.append(e1);
 
-    for (double i = -2*scale + dist; i < 2*scale - dist; i += dist) {
-        Particle *part = new Particle(glm::dvec2(i, top), .2, SOLID);
+    for (double i = 0 + dist; i < 4*scale - dist; i += dist) {
+        Particle *part = new Particle(glm::dvec2(i, top), 2, SOLID);
         part->bod = -2;
         m_particles.append(part);
         m_globalConstraints[STANDARD].append(
                     new DistanceConstraint(dist, m_particles.size() - 2, m_particles.size() - 1));
     }
 
-    Particle *e2 = new Particle(glm::dvec2(2*scale, top), 0, SOLID);
-    e2->bod = -2;
-    m_particles.append(e2);
+//    Particle *e2 = new Particle(glm::dvec2(2*scale, top), 0, SOLID);
+//    e2->bod = -2;
+//    m_particles.append(e2);
 
     m_globalConstraints[STANDARD].append(
                 new DistanceConstraint(dist, m_particles.size() - 2, m_particles.size() - 1));
@@ -1190,8 +1190,8 @@ void Simulation::initVolcano()
     delta = .8;
     for(double y = 0.; y < scale-1.; y+=delta) {
         for(double x = 0.; x < scale-y-1; x += delta) {
-            particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
-            particles.append(new Particle(glm::dvec2(-x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+            particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1.1));
+            particles.append(new Particle(glm::dvec2(-x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1.1));
         }
     }
     TotalFluidConstraint *fs = createFluid(&particles, 1);

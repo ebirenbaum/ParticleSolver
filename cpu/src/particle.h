@@ -21,7 +21,7 @@ struct SDFData;
 struct Particle
 {
     glm::dvec2 p, ep, v, f; // position, guess position, and velocity
-    double imass, tmass, sFriction, kFriction; // inverse mass, temporary height-scaled mass, coeffs of friction
+    double imass, tmass, sFriction, kFriction, t; // inverse mass, temporary height-scaled mass, coeffs of friction
     int bod; // body (if any) this particle belongs to, for disabling collisions
     Phase ph; // phase of this particle
 
@@ -35,6 +35,7 @@ struct Particle
         : p(pos), v(vel), ph(phase) { init(mass); }
 
     void init(double mass) {
+        t = 4.;
         ep = glm::dvec2();
         bod = -1;
 
