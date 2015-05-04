@@ -622,7 +622,7 @@ void Simulation::initBoxes()
     m_xBoundaries = glm::dvec2(-20,20);
     m_yBoundaries = glm::dvec2(0,1000000);
 
-    int numBoxes = 8, numColumns = 2;
+    int numBoxes = 7, numColumns = 2;
     double root2 = sqrt(2);
     QList<Particle *> vertices;
     QList<SDFData> data;
@@ -640,7 +640,8 @@ void Simulation::initBoxes()
                 double xVal = j * 4 + PARTICLE_DIAM * ((x % dim.x) - dim.x / 2);
                 for (int y = 0; y < dim.y; y++) {
                     double yVal = ((2 * i + 1) * dim.y + (y % dim.y) + 1) * PARTICLE_DIAM;
-                    vertices.append(new Particle(glm::dvec2(xVal, yVal), (x == 0 && y == 0 ? 1 : 1.)));
+                    Particle *part = new Particle(glm::dvec2(xVal, yVal), 4.);
+                    vertices.append(part);
                 }
             }
             Body *body = createRigidBody(&vertices, &data);
@@ -790,7 +791,7 @@ void Simulation::initFluidSolid()
     double scale = 3., delta = .7;
     m_gravity = glm::dvec2(0, -9.8);
     m_xBoundaries = glm::dvec2(-2 * scale,2 * scale);
-    m_yBoundaries = glm::dvec2(-2 * scale, 10 * scale);
+    m_yBoundaries = glm::dvec2(-2 * scale, 100 * scale);
     QList<Particle *> particles;
 
     double num = 1.;
@@ -798,10 +799,10 @@ void Simulation::initFluidSolid()
         double start = -2 * scale + 4 * scale * (d / num);
         for(double x = start; x < start + (4 * scale / num); x += delta) {
             for(double y = -2 * scale; y < 2 * scale; y += delta) {
-                particles.append(new Particle(glm::dvec2(x,y) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
+                particles.append(new Particle(glm::dvec2(x,y + 15) + .2 * glm::dvec2(frand() - .5, frand() - .5), 1));
             }
         }
-        createFluid(&particles, 1. + .75 * (d + 1));
+        createFluid(&particles, 1. + 1.25 * (d + 1));
         particles.clear();
     }
 
@@ -823,7 +824,7 @@ void Simulation::initFluidSolid()
             double xVal = PARTICLE_DIAM * ((x % dim.x) - dim.x / 2);
             for (int y = 0; y < dim.y; y++) {
                 double yVal = (dim.y + (y % dim.y) + 1) * PARTICLE_DIAM;
-                particles.append(new Particle(glm::dvec2(xVal-3, 15+yVal), .5));
+                particles.append(new Particle(glm::dvec2(xVal-3, 5+yVal), 2));
             }
         }
         Body *body = createRigidBody(&particles, &data);
@@ -847,7 +848,7 @@ void Simulation::initFluidSolid()
             double xVal = PARTICLE_DIAM * ((x % dim.x) - dim.x / 2);
             for (int y = 0; y < dim.y; y++) {
                 double yVal = (dim.y + (y % dim.y) + 1) * PARTICLE_DIAM;
-                particles.append(new Particle(glm::dvec2(xVal+3, 15+yVal), .2));
+                particles.append(new Particle(glm::dvec2(xVal+3, 5+yVal), .02));
             }
         }
         Body *body = createRigidBody(&particles, &data);

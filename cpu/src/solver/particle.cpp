@@ -36,7 +36,7 @@ void Body::updateCOM(QList<Particle *> *estimates, bool useEstimates)
 
         double cos = r.x * q.x + r.y * q.y,
                sin = r.y * q.x - r.x * q.y,
-               next = atan2(sin, cos) / p->imass;
+               next = atan2(sin, cos);
 
         // Ensure all guesses are close to each other
         if (i > 0) {
@@ -49,8 +49,9 @@ void Body::updateCOM(QList<Particle *> *estimates, bool useEstimates)
             }
         }
 
-        angle += next;
         prev = next;
+        next /= p->imass;
+        angle += next;
     }
     angle *= imass;
 }

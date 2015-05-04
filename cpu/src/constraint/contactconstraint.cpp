@@ -13,12 +13,12 @@ ContactConstraint::~ContactConstraint()
 void ContactConstraint::project(QList<Particle *> *estimates, int *counts)
 {
     Particle *p1 = estimates->at(i1), *p2 = estimates->at(i2);
-    if (p1->imass == 0.f && p2->imass == 0.f) {
+    if (p1->tmass == 0.f && p2->tmass == 0.f) {
         return;
     }
 
     glm::dvec2 diff = p1->getP(stabile) - p2->getP(stabile);
-    double wSum = p1->imass + p2->imass,
+    double wSum = p1->tmass + p2->tmass,
             dist = glm::length(diff),
             mag = dist - PARTICLE_DIAM;
 
@@ -29,8 +29,8 @@ void ContactConstraint::project(QList<Particle *> *estimates, int *counts)
 
     double scale = mag / wSum;
     glm::dvec2 dp = (scale / dist) * diff,
-            dp1 = -p1->imass * dp / (double)counts[i1],
-              dp2 = p2->imass * dp / (double)counts[i2];
+            dp1 = -p1->tmass * dp / (double)counts[i1],
+              dp2 = p2->tmass * dp / (double)counts[i2];
 
     p1->ep += dp1;
     p2->ep += dp2;
