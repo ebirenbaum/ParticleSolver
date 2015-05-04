@@ -552,7 +552,7 @@ void Simulation::drawBodies()
     for (int i = 0; i < m_bodies.size(); i++) {
         Body *b = m_bodies[i];
         if (debug) {
-            b->shape->draw(&m_particles);
+//            b->shape->draw(&m_particles);
         } else {
             for (int i = 0; i < b->particles.size(); i++) {
                 Particle *p = m_particles[(b->particles[i])];
@@ -694,7 +694,7 @@ void Simulation::initGranular()
 
     for (int i = -15; i <= 15; i++) {
         for (int j = 0; j < 30; j++) {
-            glm::dvec2 pos = glm::dvec2(i * (PARTICLE_DIAM + EPSILON), pow(j,1) * (PARTICLE_DIAM) + PARTICLE_RAD + m_yBoundaries.x);
+            glm::dvec2 pos = glm::dvec2(i * (PARTICLE_DIAM + EPSILON), pow(j,1.2) * (PARTICLE_DIAM) + PARTICLE_RAD + m_yBoundaries.x);
             Particle *part= new Particle(pos, 1, SOLID);
             part->sFriction = .35;
             part->kFriction = .3;
@@ -744,7 +744,7 @@ void Simulation::initBoxes()
     m_xBoundaries = glm::dvec2(-20,20);
     m_yBoundaries = glm::dvec2(0,1000000);
 
-    int numBoxes = 10, numColumns = 2;
+    int numBoxes = 25, numColumns = 2;
     double root2 = sqrt(2);
     QList<Particle *> vertices;
     QList<SDFData> data;
@@ -780,7 +780,7 @@ void Simulation::initWall()
     m_yBoundaries = glm::dvec2(0,1000000);
 
     glm::dvec2 dim = glm::dvec2(6,2);
-    int height = 9, width = 5;
+    int height = 11, width = 5;
     double root2 = sqrt(2);
     QList<Particle *> vertices;
     QList<SDFData> data;
