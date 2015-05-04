@@ -35,7 +35,8 @@ enum SimulationType {
     CRADLE_TEST,
     NUM_SIMULATION_TYPES,
     SMOKE_OPEN_TEST,
-    SMOKE_CLOSED_TEST
+    SMOKE_CLOSED_TEST,
+    WRECKING_BALL
 };
 
 // The basic simulation, implementing the "main solve loop" from the paper.
@@ -61,6 +62,7 @@ public:
     void initNewtonsCradle();
     void initSmokeOpen();
     void initSmokeClosed();
+    void initWreckingBall();
 
     // Basic interaction events
     void tick(double seconds);
