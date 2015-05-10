@@ -37,6 +37,9 @@ public:
     uint getNumParticles() const { return m_numParticles; }
     float getParticleRadius() const { return m_particleRadius; }
 
+    int3 getMinBounds() { return m_minBounds; }
+    int3 getMaxBounds() { return m_maxBounds; }
+
     float4 mousePos;
 
 private:

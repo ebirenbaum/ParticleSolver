@@ -9,20 +9,9 @@
 #include "util.cuh"
 
 #define MAX_PARTICLES 20000 // (vbo size)
-//#define NUM_PARTICLES 5000
-//#define NUM_PARTICLES 4000
-//#define NUM_PARTICLES 2025
-//#define NUM_PARTICLES 1024
-//#define NUM_PARTICLES 529
-//#define NUM_PARTICLES 506
-//#define NUM_PARTICLES 225
-//#define NUM_PARTICLES 25
-//#define NUM_PARTICLES 9
 #define NUM_PARTICLES 0
 #define PARTICLE_RADIUS 0.25f
-//#define GRID_SIZE make_uint3(64, 64, 2) // 2D
 #define GRID_SIZE make_uint3(64, 64, 64) // 3D
-//#define GRID_SIZE make_uint3(4, 4, 4) // 3D
 
 #include <random>
 
@@ -40,7 +29,7 @@ ParticleApp::ParticleApp()
 
     m_particleSystem = new ParticleSystem(NUM_PARTICLES, PARTICLE_RADIUS, GRID_SIZE, MAX_PARTICLES, make_int3(-50, 0, -50), make_int3(50, 200, 50), 5);
     makeInitScene();
-    m_renderer = new Renderer();
+    m_renderer = new Renderer(m_particleSystem->getMinBounds(), m_particleSystem->getMaxBounds());
     m_renderer->createVAO(m_particleSystem->getCurrentReadBuffer(),
                           m_particleSystem->getParticleRadius());
 }
@@ -80,7 +69,6 @@ void ParticleApp::tick(float secs)
 {
     if (m_fluidEmmiterOn && m_timer <= 0.f)
     {
-//        m_particleSystem->setFluidToAdd(make_float3(frand() * 5.f, 2.f, frand() * 5.f), make_float3(1,0,0), 1.f, 1.5f);
         m_particleSystem->addFluid(make_int3(-1,0,-1), make_int3(1,1,1), 1.f, 1.f, make_float3(1,0,0));
         m_timer = 0.1f;
     }
@@ -201,6 +189,8 @@ void ParticleApp::keyReleased(QKeyEvent *e)
     case Qt::Key_7:
         delete m_particleSystem;
         m_particleSystem = new ParticleSystem(NUM_PARTICLES, PARTICLE_RADIUS, GRID_SIZE, MAX_PARTICLES, make_int3(-50, 0, -50), make_int3(50, 200, 50), 5);
+        m_particleSystem->addHorizCloth(make_int2(-10, -10), make_int2(10, 10), make_float3(.3f, 5.5f, .3f), make_float2(.1f, .1f), 10.f, true);
+        m_particleSystem->addFluid(make_int3(-3, 6, -3), make_int3(3, 15, 3), .5f, 1.5f, make_float3(frand(), frand(), frand()));
         break;
     case Qt::Key_8:
         delete m_particleSystem;

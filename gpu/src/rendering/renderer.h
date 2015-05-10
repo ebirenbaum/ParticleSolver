@@ -14,7 +14,7 @@ class QKeyEvent;
 class Renderer
 {
 public:
-    Renderer();
+    Renderer(int3 minBounds, int3 maxBounds);
     ~Renderer();
 
     void createVAO(GLuint vbo, float radius);
@@ -41,9 +41,17 @@ private:
     void _initGL();
     GLuint _compileProgram(const char *vertex_file_path, const char *fragment_file_path);
 
+    void _buildGrid(int3 minBounds, int3 maxBounds);
+    void _setGridBuffer(float *data, int memsize);
+
+
     GLuint m_program;
     GLuint m_vbo;
     GLuint m_vao;
+
+    GLuint m_vboGrid;
+    GLuint m_vaoGrid;
+    int m_numGridVerts;
 
     ActionCamera *m_camera;
     glm::ivec2 m_screenSize;

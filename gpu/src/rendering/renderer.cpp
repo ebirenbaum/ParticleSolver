@@ -20,10 +20,13 @@
 
 #include"debugprinting.h"
 
-Renderer::Renderer()
+Renderer::Renderer(int3 minBounds, int3 maxBounds)
     : m_program(0),
       m_vbo(0),
       m_vao(0),
+      m_vboGrid(0),
+      m_vaoGrid(0),
+      m_numGridVerts(0),
       m_camera(NULL),
       m_particleRadius(0),
       m_wsadeq(0)
@@ -33,20 +36,8 @@ Renderer::Renderer()
     m_camera->setOffset(0.f);
     m_camera->setOffsetHeight(0.f);
     m_camera->setCenter(glm::vec3(0, 10, 25));
-//#ifdef TWOD
-//    // 2D
-//    glm::vec4 eye = glm::vec4(0,10,200,0);
-//    glm::vec4 look = glm::vec4(0,.2,-1,0);
-//#else
-//    // 3D
-//    glm::vec4 eye = glm::vec4(0,10,50,0);
-//    glm::vec4 look = glm::vec4(0,-.15,-1,0);
-//#endif
-//    // 3D cloth
-////    glm::vec4 eye = glm::vec4(30,20,30,0);
-////    glm::vec4 look = glm::vec4(-1,-.3,-1,0);
-//    glm::vec4 up = glm::vec4(0,1,0,0);
-//    m_camera->orientLook(eye, look , up);
+
+    _buildGrid(minBounds, maxBounds);
 }
 
 
@@ -56,6 +47,12 @@ Renderer::~Renderer()
         glDeleteBuffers(1, &m_vbo);
     if (m_vao)
         glDeleteVertexArrays(1, &m_vao);
+
+    if (m_vboGrid)
+        glDeleteBuffers(1, &m_vboGrid);
+    if (m_vaoGrid)
+        glDeleteVertexArrays(1, &m_vaoGrid);
+
     if (m_camera)
         delete m_camera;
 }
@@ -110,10 +107,23 @@ void Renderer::render(std::vector<int2> colorIndices, std::vector<float4> colors
     glUniformMatrix4fv(glGetUniformLocation(m_program, "pv"), 1, GL_FALSE, glm::value_ptr(projView));
     glUniformMatrix4fv(glGetUniformLocation(m_program, "projection"), 1, GL_FALSE, glm::value_ptr(proj));
     glUniformMatrix4fv(glGetUniformLocation(m_program, "view"), 1, GL_FALSE, glm::value_ptr(view));
-    glUniform1f(glGetUniformLocation(m_program, "particleRadius"), m_particleRadius);
+    glUniform1f(glGetUniformLocation(m_program, "particleRadius"), -1.f);
     glUniform1i(glGetUniformLocation(m_program, "screenHeight"), m_screenSize.y);
 
+    GLuint colorLoc = glGetUniformLocation(m_program, "color");
 
+    // Draw floor
+    glBindVertexArray(m_vaoGrid);
+    glUniform4f(colorLoc, .1f, .1f, .1f, 1.f);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    // Draw grid and walls
+    glUniform4f(colorLoc, .5f, .5f, .5f, 1.f);
+    glDrawArrays(GL_LINE_STRIP, 4, m_numGridVerts);
+
+
+    // Draw points
+    glUniform1f(glGetUniformLocation(m_program, "particleRadius"), m_particleRadius);
     glEnable(GL_PROGRAM_POINT_SIZE);
 
     glBindVertexArray(m_vao);
@@ -125,7 +135,7 @@ void Renderer::render(std::vector<int2> colorIndices, std::vector<float4> colors
     {
         index = colorIndices.at(i);
         color = colors.at(i);
-        glUniform4f(glGetUniformLocation(m_program, "color"), color.x, color.y, color.z, color.w);
+        glUniform4f(colorLoc, color.x, color.y, color.z, color.w);
         glDrawArrays(GL_POINTS, index.x, index.y - index.x);
     }
     glBindVertexArray(0);
@@ -352,5 +362,121 @@ void Renderer::resize(int w, int h)
 {
     m_camera->setAspectRatio(w * 1.f / h);
     m_screenSize = glm::ivec2(w, h);
+}
+
+void Renderer::_buildGrid(int3 minBounds, int3 maxBounds)
+{
+    m_numGridVerts = (2 + maxBounds.x - minBounds.x) + (2 + maxBounds.z - minBounds.z) + 2;
+    int size = (m_numGridVerts + 4) * 3;
+    float *data = new float[size];
+
+    data[0] = maxBounds.x; data[1] = minBounds.y; data[2] = minBounds.z;
+    data[3] = minBounds.x; data[4] = minBounds.y; data[5] = minBounds.z;
+    data[6] = maxBounds.x; data[7] = minBounds.y; data[8] = maxBounds.z;
+    data[9] = minBounds.x; data[10] = minBounds.y; data[11] = maxBounds.z;
+
+//    int index = 12;
+//    int i;
+//    bool flop = true;
+
+//    // X
+//    for (i = minBounds.x; i <= maxBounds.x; i+=2)
+//    {
+//        if (flop)
+//        {
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+//        }
+//        else
+//        {
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
+//        }
+//        flop = !flop;
+//    }
+//    i--;
+//    if (i == maxBounds.x)
+//        if (!flop)
+//        {
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+//            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = minBounds.z;
+//        }
+//        else
+//        {
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
+//            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = minBounds.z;
+//        }
+//    else
+//        if (i % 4 == 0)
+//        {
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+//        }
+//        else
+//        {
+//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
+//        }
+
+
+//    // Z
+//    for (i = minBounds.z; i <= maxBounds.z; i+=2)
+//    {
+//        if (i % 4 == 0)
+//        {
+//            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = i;
+//            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = i;
+//        }
+//        else
+//        {
+//            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = i;
+//            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = i;
+//        }
+//    }
+
+//    cout << index << ", " << size << endl;
+
+    m_numGridVerts = 0;
+    size = 12;
+
+    _setGridBuffer(data, size * sizeof(float));
+
+    delete [] data;
+}
+
+void Renderer::_setGridBuffer(float *data, int memsize)
+{
+    if (m_vboGrid)
+        glDeleteBuffers(1, &m_vboGrid);
+    if (m_vaoGrid)
+        glDeleteVertexArrays(1, &m_vaoGrid);
+
+    // set and bind vertex buffer object.
+    glGenBuffers(1, &m_vboGrid);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vboGrid);
+
+    // Initialize the vertex array object.
+    glGenVertexArrays(1, &m_vaoGrid);
+    glBindVertexArray(m_vaoGrid);
+
+    glBufferData(GL_ARRAY_BUFFER, memsize, data, GL_STATIC_DRAW);
+
+    GLuint position = glGetAttribLocation(m_program, "position");
+
+    glEnableVertexAttribArray(position);
+    glVertexAttribPointer(
+        position,
+        3,                   // Num coordinates per position
+        GL_FLOAT,            // Type
+        GL_FALSE,            // Normalized
+        sizeof(GLfloat) * 3, // Stride
+        (void*) 0            // Array buffer offset
+    );
+
+    // Unbind buffers.
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 

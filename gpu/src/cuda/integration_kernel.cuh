@@ -82,6 +82,13 @@ struct collide_world_functor
         if (phase < SOLID)
             eps = d * 0.01f;
 
+        if (epos.y < minBounds.y + params.particleRadius)
+        {
+            epos.y = minBounds.y + params.particleRadius + rands[5] * eps;
+            n += make_float3(0,1,0);
+        }
+
+        eps = d * 0.01f;
 
         if (epos.x > maxBounds.x - params.particleRadius)
         {
@@ -99,12 +106,6 @@ struct collide_world_functor
         {
             epos.y = maxBounds.y - (params.particleRadius + rands[2] * eps);
             n += make_float3(0,-1,0);
-        }
-
-        if (epos.y < minBounds.y + params.particleRadius)
-        {
-            epos.y = minBounds.y + params.particleRadius + rands[5] * eps;
-            n += make_float3(0,1,0);
         }
 
 #ifndef TWOD
