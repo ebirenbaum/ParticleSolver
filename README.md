@@ -13,7 +13,7 @@ The simulation supports a variety of states of matter by representing the entire
   - Fluids
   - Gasses
 
-#### Demo scenes
+#### CPU demo scenes
 The following demo scenes are built in the CPU application, labelled with appropriate key commands to bring them up:
 
   - *1* - A collapsing sand pile demonstrating frictional effect on angle of repose
@@ -38,3 +38,14 @@ The following commands may also be useful:
   - *Space* - move forward by a time step during time-step mode
   - *R* - reset the simulation
   - *C* - toggle rendering of individual particles
+
+#### GPU demo scenes
+Logan!
+
+#### Pretty pictures
+
+![](./img/3d1.png)
+![](./img/3d2.png)
+![](./img/2d1.png)
+![](./img/2d2.png)
+![](./img/2d3.png)
