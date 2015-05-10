@@ -4,8 +4,14 @@ TARGET = particles_cuda
 TEMPLATE = app
 
 # project build directories
-DESTDIR     = $$system(pwd)
-OBJECTS_DIR = $$DESTDIR/bin
+DESTDIR     = $$system(pwd) # target dir
+BUILDDIR    = $$DESTDIR/build
+
+MOC_DIR     = $$BUILDDIR # moc_...
+RCC_DIR     = $$BUILDDIR # qrc_resources.cpp
+UI_DIR      = $$BUILDDIR # ui_mainwindow.cpp
+
+OBJECTS_DIR = $$BUILDDIR/bin # .o files
 
 unix:!macx {
     NON_CUDA_LIBS = -lGLU

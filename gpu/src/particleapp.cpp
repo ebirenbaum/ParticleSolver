@@ -6,6 +6,7 @@
 #include "particlesystem.h"
 #include "renderer.h"
 #include "helper_math.h"
+#include "util.cuh"
 
 #define MAX_PARTICLES 20000 // (vbo size)
 //#define NUM_PARTICLES 5000
@@ -35,6 +36,8 @@ ParticleApp::ParticleApp()
       m_fluidEmmiterOn(false),
       m_timer(-1.f)
 {
+    cudaInit();
+
     m_particleSystem = new ParticleSystem(NUM_PARTICLES, PARTICLE_RADIUS, GRID_SIZE, MAX_PARTICLES, make_int3(-50, 0, -50), make_int3(50, 200, 50), 5);
     makeInitScene();
     m_renderer = new Renderer();

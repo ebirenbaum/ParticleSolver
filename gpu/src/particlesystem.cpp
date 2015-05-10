@@ -80,7 +80,6 @@ void ParticleSystem::update(float deltaTime)
 {
     assert(m_initialized);
 
-//    std::cout << deltaTime << std::endl;
     deltaTime = std::min(deltaTime, .05f);
 //    deltaTime = .01f;
 
@@ -361,7 +360,6 @@ void ParticleSystem::addFluid(int3 ll, int3 ur, float mass, float density, float
 
     int3 count = make_int3((int)ceil(ur.x - ll.x) / distance, (int)ceil(ur.y - ll.y) / distance, (int)ceil(ur.z - ll.z) / distance);
 
-//    std::cout << count.x << ", " << count.y << ", " << count.x << ", " << std::endl;
     float4 pos;
 
 #ifndef TWOD
@@ -372,8 +370,6 @@ void ParticleSystem::addFluid(int3 ll, int3 ur, float mass, float density, float
         {
             for (int x = 0; x < count.x; x++)
             {
-//                std::cout << x << ", " << y << ", " << z << std::endl;
-
                 pos = make_float4(ll.x + x * distance + (frand()*2.0f-1.0f)*jitter,
                                   ll.y + y * distance + (frand()*2.0f-1.0f)*jitter,
             #ifdef TWOD
@@ -405,7 +401,6 @@ void ParticleSystem::addParticleGrid(int3 ll, int3 ur, float mass, bool addJitte
 
     int3 count = make_int3((int)ceil(ur.x - ll.x) / distance, (int)ceil(ur.y - ll.y) / distance, (int)ceil(ur.z - ll.z) / distance);
 
-    std::cout << count.x << ", " << count.y << ", " << count.z << std::endl;
     float4 pos;
 
 #ifndef TWOD
@@ -443,7 +438,6 @@ void ParticleSystem::addHorizCloth(int2 ll, int2 ur, float3 spacing, float2 dist
 
     int2 count = make_int2((int)ceil(ur.x - ll.x) / spacing.x, (int)ceil(ur.y - ll.y) / spacing.z);
 
-    std::cout << count.x << ", " << count.y << std::endl;
     float4 pos;
 
 #ifndef TWOD
@@ -594,7 +588,6 @@ void ParticleSystem::_init(uint numParticles, uint maxParticles)
 {
     m_maxParticles = maxParticles;
     m_numParticles = numParticles;
-    cudaInit();
     initIntegration();
     initHandles();
 

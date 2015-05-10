@@ -21,10 +21,8 @@ extern "C"
 
     void cudaInit()
     {
-        int devID;
-
         // use device with highest Gflops/s
-        devID = findCudaDevice();
+        int devID = findCudaDevice();
 
         if (devID < 0)
         {

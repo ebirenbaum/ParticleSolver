@@ -6,7 +6,7 @@
 # Compiled Source #
 ###################
 *.o
-bin/
+build/
 
 # Executables #
 ###############
