@@ -69,7 +69,7 @@ void ParticleApp::tick(float secs)
 {
     if (m_fluidEmmiterOn && m_timer <= 0.f)
     {
-        m_particleSystem->addFluid(make_int3(-1,0,-1), make_int3(1,1,1), 1.f, 1.f, make_float3(1,0,0));
+        m_particleSystem->addFluid(make_int3(-12,0,10), make_int3(-10,1,12), 1.f, 1.f, make_float3(0,0,1));
         m_timer = 0.1f;
     }
     m_timer -= secs;
@@ -189,8 +189,14 @@ void ParticleApp::keyReleased(QKeyEvent *e)
     case Qt::Key_7:
         delete m_particleSystem;
         m_particleSystem = new ParticleSystem(NUM_PARTICLES, PARTICLE_RADIUS, GRID_SIZE, MAX_PARTICLES, make_int3(-50, 0, -50), make_int3(50, 200, 50), 5);
-        m_particleSystem->addHorizCloth(make_int2(-10, -10), make_int2(10, 10), make_float3(.3f, 5.5f, .3f), make_float2(.1f, .1f), 10.f, true);
-        m_particleSystem->addFluid(make_int3(-3, 6, -3), make_int3(3, 15, 3), .5f, 1.5f, make_float3(frand(), frand(), frand()));
+        m_particleSystem->addHorizCloth(make_int2(4, 4), make_int2(14, 14), make_float3(.3f, 2.5f, .3f), make_float2(.25f, .25f), 10.f, true);
+        m_particleSystem->addHorizCloth(make_int2(10, -10), make_int2(25, -5), make_float3(.3f, 15.5f, .3f), make_float2(.25f, .25f), 3.f, false);
+        m_particleSystem->addRope(make_float3(-7, 20, -7), make_float3(0, -.5, 0), .4f, 30, 1.f, true);
+        m_particleSystem->addRope(make_float3(-6, 20, -7), make_float3(0, -.5, 0), .4f, 50, 1.f, true);
+        m_particleSystem->addRope(make_float3(-7, 20, -6), make_float3(0, -.5, 0), .4f, 40, 1.f, true);
+        m_particleSystem->addParticleGrid(make_int3(7, 6, 7), make_int3(11, 11, 11), 1.f, false);
+        m_particleSystem->addParticleGrid(make_int3(-2, 0, -10), make_int3(2, 12, -7), 1.f, false);
+        m_particleSystem->addParticleGrid(make_int3(-8, 0, -5), make_int3(-6, 9, -2), 1.f, false);
         break;
     case Qt::Key_8:
         delete m_particleSystem;

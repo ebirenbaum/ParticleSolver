@@ -119,7 +119,7 @@ void Renderer::render(std::vector<int2> colorIndices, std::vector<float4> colors
 
     // Draw grid and walls
     glUniform4f(colorLoc, .5f, .5f, .5f, 1.f);
-    glDrawArrays(GL_LINE_STRIP, 4, m_numGridVerts);
+    glDrawArrays(GL_LINES, 4, m_numGridVerts);
 
 
     // Draw points
@@ -366,7 +366,21 @@ void Renderer::resize(int w, int h)
 
 void Renderer::_buildGrid(int3 minBounds, int3 maxBounds)
 {
-    m_numGridVerts = (2 + maxBounds.x - minBounds.x) + (2 + maxBounds.z - minBounds.z) + 2;
+    int spacing = 3;
+    int maxDistX = maxBounds.x - minBounds.x;
+    int maxDistZ = maxBounds.z - minBounds.z;
+    int numX = maxDistX / spacing;
+    int numZ = maxDistZ / spacing;
+
+    if (maxDistX % spacing != 0)
+        numX++;
+    if (maxDistZ % spacing != 0)
+        numZ++;
+
+    numX = 2 * (numX + 1);
+    numZ = 2 * (numZ + 1);
+
+    m_numGridVerts =  numX + numZ + 16; // 16 for wall lines
     int size = (m_numGridVerts + 4) * 3;
     float *data = new float[size];
 
@@ -375,71 +389,99 @@ void Renderer::_buildGrid(int3 minBounds, int3 maxBounds)
     data[6] = maxBounds.x; data[7] = minBounds.y; data[8] = maxBounds.z;
     data[9] = minBounds.x; data[10] = minBounds.y; data[11] = maxBounds.z;
 
-//    int index = 12;
-//    int i;
-//    bool flop = true;
+    int index = 12;
+    int i;
+    bool flop = true;
 
-//    // X
-//    for (i = minBounds.x; i <= maxBounds.x; i+=2)
-//    {
-//        if (flop)
-//        {
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
-//        }
-//        else
-//        {
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
-//        }
-//        flop = !flop;
-//    }
-//    i--;
-//    if (i == maxBounds.x)
-//        if (!flop)
-//        {
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
-//            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = minBounds.z;
-//        }
-//        else
-//        {
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
-//            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = minBounds.z;
-//        }
-//    else
-//        if (i % 4 == 0)
-//        {
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
-//        }
-//        else
-//        {
-//            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
-//        }
+    // X
+    for (i = minBounds.x; i <= maxBounds.x; i+=spacing)
+    {
+        if (flop)
+        {
+            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
+            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+        }
+        else
+        {
+            data[index++] = i; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+            data[index++] = i; data[index++] = minBounds.y, data[index++] = minBounds.z;
+        }
+        flop = !flop;
+    }
+    if (i-spacing != maxBounds.x)
+    {
+        if (flop)
+        {
+            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = minBounds.z;
+            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+        }
+        else
+        {
+            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = minBounds.z;
+        }
+        flop = !flop;
+    }
 
 
-//    // Z
-//    for (i = minBounds.z; i <= maxBounds.z; i+=2)
-//    {
-//        if (i % 4 == 0)
-//        {
-//            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = i;
-//            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = i;
-//        }
-//        else
-//        {
-//            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = i;
-//            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = i;
-//        }
-//    }
+    // Z
+    flop = true;
+    for (i = minBounds.z; i <= maxBounds.z; i+=spacing)
+    {
+        if (flop)
+        {
+            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = i;
+            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = i;
+        }
+        else
+        {
+            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = i;
+            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = i;
+        }
+        flop = !flop;
+    }
+    if (i-spacing != maxBounds.z)
+    {
+        if (flop)
+        {
+            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+        }
+        else
+        {
+            data[index++] = maxBounds.x; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+            data[index++] = minBounds.x; data[index++] = minBounds.y, data[index++] = maxBounds.z;
+        }
+        flop = !flop;
+    }
 
-//    cout << index << ", " << size << endl;
 
-    m_numGridVerts = 0;
-    size = 12;
+    // Walls
+    data[index++] = minBounds.x; data[index++] = minBounds.y; data[index++] = minBounds.z;
+    data[index++] = minBounds.x; data[index++] = maxBounds.y; data[index++] = minBounds.z;
+    data[index++] = minBounds.x; data[index++] = maxBounds.y; data[index++] = minBounds.z;
+
+    data[index++] = maxBounds.x; data[index++] = maxBounds.y; data[index++] = minBounds.z;
+    data[index++] = maxBounds.x; data[index++] = minBounds.y; data[index++] = minBounds.z;
+    data[index++] = maxBounds.x; data[index++] = maxBounds.y; data[index++] = minBounds.z;
+    data[index++] = maxBounds.x; data[index++] = maxBounds.y; data[index++] = minBounds.z;
+
+    data[index++] = maxBounds.x; data[index++] = maxBounds.y; data[index++] = maxBounds.z;
+    data[index++] = maxBounds.x; data[index++] = minBounds.y; data[index++] = maxBounds.z;
+    data[index++] = maxBounds.x; data[index++] = maxBounds.y; data[index++] = maxBounds.z;
+    data[index++] = maxBounds.x; data[index++] = maxBounds.y; data[index++] = maxBounds.z;
+
+    data[index++] = minBounds.x; data[index++] = maxBounds.y; data[index++] = maxBounds.z;
+    data[index++] = minBounds.x; data[index++] = minBounds.y; data[index++] = maxBounds.z;
+    data[index++] = minBounds.x; data[index++] = maxBounds.y; data[index++] = maxBounds.z;
+    data[index++] = minBounds.x; data[index++] = maxBounds.y; data[index++] = maxBounds.z;
+
+    data[index++] = minBounds.x; data[index++] = maxBounds.y; data[index++] = minBounds.z;
+
+    cout << index << ", " << size << endl;
+
+//    m_numGridVerts = 0;
+//    size = 12;
 
     _setGridBuffer(data, size * sizeof(float));
 
