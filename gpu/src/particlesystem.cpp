@@ -5,6 +5,18 @@
 #include <math.h>
 #include <thrust/host_vector.h>
 
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+
+///////////////////////////////////////////
+//#include <assert.h>
+//#include <math.h>
+//#include <memory.h>
+//#include <cstdio>
+//#include <cstdlib>
+//#include <algorithm>
+///////////////////////////////////////////
+
 
 #include "wrappers.cuh"
 #include "kernel.cuh"
@@ -43,16 +55,16 @@ ParticleSystem::ParticleSystem(uint numParticles, float particleRadius, uint3 gr
     float cellSize = m_params.particleRadius * 2.0f;  // cell size equal to particle diameter
     m_params.cellSize = make_float3(cellSize);
 
-//    m_params.spring = 0.f;
-//    m_params.damping = 0.f;
-//    m_params.shear = 0.f;
-//    m_params.attraction = 0.f;
-//    m_params.boundaryDamping = 0.f;
-    m_params.spring = 0.5f;
-    m_params.damping = 0.02f;
-    m_params.shear = 0.01f;
-    m_params.attraction = 0.0f;
-    m_params.boundaryDamping = -0.5f;
+    m_params.spring = 0.f;
+    m_params.damping = 0.f;
+    m_params.shear = 0.f;
+    m_params.attraction = 0.f;
+    m_params.boundaryDamping = 0.f;
+//    m_params.spring = 0.5f;
+//    m_params.damping = 0.02f;
+//    m_params.shear = 0.01f;
+//    m_params.attraction = 0.0f;
+//    m_params.boundaryDamping = -0.5f;
 
 //    m_params.gravity = make_float3(0.0f, -.0f, 0.0f);
     m_params.gravity = make_float3(0.0f, -9.8f, 0.0f);
@@ -136,6 +148,7 @@ void ParticleSystem::update(float deltaTime)
                     m_numGridCells);
 
         solveFluids(m_dSortedPos,
+                    m_dSortedW,
                     m_dSortedPhase,
                     m_dGridParticleIndex,
                     m_dCellStart,
@@ -258,7 +271,7 @@ void ParticleSystem::addParticle(float4 pos, float4 vel, float mass, float ro, i
 
 void ParticleSystem::addParticleMultiple(float *pos, float *vel, float *mass, float *ro, int *phase, int numParticles)
 {
-    if (m_numParticles == m_maxParticles)
+    if (m_numParticles + numParticles >= m_maxParticles)
         return;
 
     unregisterGLBufferObject(m_cuda_posvbo_resource);
@@ -482,7 +495,7 @@ void ParticleSystem::addHorizCloth(int2 ll, int2 ur, float3 spacing, float2 dist
     memset((void*)vel, 0, arraySize * 4 * sizeof(float));
     std::fill(w, w + arraySize, 1.f / mass);
     std::fill(ro, ro + arraySize, 1.f);
-    std::fill(phase, phase + arraySize, RIGID + m_rigidIndex);
+    std::fill(phase, phase + arraySize, RIGID + m_rigidIndex/*CLOTH*/);
 
     addParticleMultiple(pos, vel, w, ro, phase, arraySize);
     addPointConstraint(indicesP, points, numPoints);
@@ -549,6 +562,13 @@ void ParticleSystem::addStaticSphere(int3 ll, int3 ur, float spacing)
     float radius = (ur.x - ll.x) * .5f;
     float3 center = make_float3(ll) + make_float3(radius);
 
+
+    // particle setup
+    std::vector<float> posV;
+    std::vector<uint> indices;
+    std::vector<float> points;
+    uint index = 0;
+
 #ifndef TWOD
     for (int z = 0; z < count.z; z++)
     {
@@ -568,15 +588,35 @@ void ParticleSystem::addStaticSphere(int3 ll, int3 ur, float spacing)
                                   1.f);
                 if (length(make_float3(pos) - center) < radius)
                 {
-                    uint index = m_numParticles - 1;
-                    addParticle(pos, make_float4(0.f), 10.f, 1.f, RIGID + m_rigidIndex);
-                    addPointConstraint(&index,(float*)&pos, 1);
+                    posV.push_back(pos.x);
+                    posV.push_back(pos.y);
+                    posV.push_back(pos.z);
+                    posV.push_back(pos.w);
+
+                    indices.push_back(startI + index++);
+
+                    points.push_back(pos.x);
+                    points.push_back(pos.y);
+                    points.push_back(pos.z);
                 }
             }
         }
 #ifndef TWOD
     }
 #endif
+    int arraySize = indices.size();
+    float vel[arraySize * 4];
+    float w[arraySize];
+    float ro[arraySize];
+    int phase[arraySize];
+
+    memset((void*)vel, 0, arraySize * 4 * sizeof(float));
+    std::fill(w, w + arraySize, .01f);
+    std::fill(ro, ro + arraySize, 1.f);
+    std::fill(phase, phase + arraySize, RIGID + m_rigidIndex);
+
+    addParticleMultiple(posV.data(), vel, w, ro, phase, arraySize);
+    addPointConstraint(indices.data(), points.data(), indices.size());
 
     m_colorIndex.push_back(make_int2(startI, m_numParticles));
     m_colors.push_back(make_float4(colors[rand() % numColors], 1.f));

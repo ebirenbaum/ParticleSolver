@@ -52,8 +52,7 @@ extern "C"
         void *ptr;
         checkCudaErrors(cudaGraphicsMapResources(1, cuda_vbo_resource, 0));
         size_t num_bytes;
-        checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&ptr, &num_bytes,
-                                                             *cuda_vbo_resource));
+        checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&ptr, &num_bytes, *cuda_vbo_resource));
         return ptr;
     }
 

@@ -91,6 +91,7 @@ unix:!macx {
     CUDA_LIB = $$CUDA_DIR/lib64
 
     CUDA_DEF += -DCUDA_5
+    DEFINES += CUDA_5
 
     # GPU architecture
     CUDA_ARCH     = sm_21 # should be able to detect this somehow instead of hardcoding
@@ -103,6 +104,7 @@ macx {
     CUDA_LIB = $$CUDA_DIR/lib
 
     CUDA_DEF += -DCUDA_7
+    DEFINES += CUDA_7
 
     # GPU architecture
     CUDA_ARCH     = sm_30 # should be able to detect this somehow instead of hardcoding

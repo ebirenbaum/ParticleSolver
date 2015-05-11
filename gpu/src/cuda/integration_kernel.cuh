@@ -128,7 +128,7 @@ struct collide_world_functor
         pos.z = ZPOS;
 #endif
 
-        if (length(n) < EPS || phase < SOLID)
+        if (length(n) < EPS || phase < CLOTH)
         {
             thrust::get<0>(t) = make_float4(epos, posData.w);
             return;
@@ -373,7 +373,7 @@ void collideD(float4 *newPos,               // output: new pos
     if (index >= numParticles) return;
 
     int phase = FETCH(oldPhase, index);
-    if (phase < SOLID) return;
+    if (phase < CLOTH) return;
 
     // read particle data from sorted arrays
     float3 pos = make_float3(FETCH(oldPos, index));
@@ -482,7 +482,6 @@ __device__
 void collideCellRadius(int3    gridPos,
                          uint    index,
                          float3  pos,
-                         float4 *oldPos,
                          uint   *cellStart,
                          uint   *cellEnd,
                          uint   *neighbors,
@@ -520,8 +519,7 @@ void collideCellRadius(int3    gridPos,
 
 
 __global__
-void findLambdasD(float  *lambda,
-                  float4 *oldPos,               // input: sorted positions
+void findLambdasD(float  *lambda,               // input: sorted positions
                   uint   *gridParticleIndex,    // input: sorted particle indices
                   uint   *cellStart,
                   uint   *cellEnd,
@@ -555,17 +553,20 @@ void findLambdasD(float  *lambda,
             for (int x=-rad; x<=rad; x++)
             {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                collideCellRadius(neighbourPos, index, pos, oldPos, cellStart, cellEnd, neighbors, numNeighbors);
+                collideCellRadius(neighbourPos, index, pos, cellStart, cellEnd, neighbors, numNeighbors);
             }
         }
     }
 
+    float w = FETCH(invMass, index);
     float ro = 0.f;
     float denom = 0.f;
     float3 grad = make_float3(0.f);
     for (uint i = 0; i < numNeighbors[index]; i++)
     {
-        float3 pos2 =  make_float3(FETCH(oldPos, neighbors[index * MAX_FLUID_NEIGHBORS + i]));
+        uint ni = neighbors[index * MAX_FLUID_NEIGHBORS + i];
+        float3 pos2 =  make_float3(FETCH(oldPos, ni));
+//        float w2 = FETCH(invMass, ni);
         float3 r = pos - pos2;
         float rlen2 = dot(r, r);
         float rlen = sqrt(rlen2);
@@ -573,7 +574,7 @@ void findLambdasD(float  *lambda,
         float hMinus = H - rlen;
 
         // do fluid solid scaling hurr
-        ro += (POLY6_COEFF * hMinus2*hMinus2*hMinus2 ) / 1.f; // <-- should be mass
+        ro += (POLY6_COEFF * hMinus2*hMinus2*hMinus2 ) / w;
 
         float3 spikeyGrad;
         if (rlen < 0.0001f)
@@ -585,31 +586,15 @@ void findLambdasD(float  *lambda,
         grad += -spikeyGrad;
         denom += dot(spikeyGrad, spikeyGrad);
     }
-    ro += (POLY6_COEFF * H6 ) / 1.f; // <-- should be mass too
+    ro += (POLY6_COEFF * H6 ) / w;
     denom += dot(grad, grad);
 
     lambda[index] = - ((ro / ros[gridParticleIndex[index]]) - 1) / (denom + FLUID_RELAXATION);
-
-//    float3 relPosM = make_float3(mousePos) - pos;
-//    float distM = length(relPosM);
-
-//    if (distM < params.particleRadius)
-//    {
-//        for (uint i = 0; i < numNeighbors[index]; i++)
-//        {
-//            neighbors[index * MAX_FLUID_NEIGHBORS + i] = gridParticleIndex[neighbors[index * MAX_FLUID_NEIGHBORS + i]];
-//        }
-//    }
-//    else
-//    {
-//        numNeighbors[index] = 0;
-//    }
 }
 
 
 __global__
-void solveFluidsD(float  *lambda,
-                  float4 *oldPos,               // input: sorted positions
+void solveFluidsD(float  *lambda,              // input: sorted positions
                   uint   *gridParticleIndex,    // input: sorted particle indices
                   float4 *particles,
                   uint    numParticles,

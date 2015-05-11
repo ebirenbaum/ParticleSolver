@@ -1,5 +1,6 @@
 
 #include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
 
 #include <curand.h>
 #include <stdio.h>
@@ -27,6 +28,8 @@ thrust::device_vector<float> ros;
 
 thrust::device_vector<uint> neighbors;
 thrust::device_vector<uint> numNeighbors;
+
+thrust::device_vector<float> textureVec;
 
 float *rands;
 
@@ -65,6 +68,7 @@ extern "C"
         lambda.resize(ros.size());
         numNeighbors.resize(ros.size());
         neighbors.resize(V.size() * MAX_FLUID_NEIGHBORS);
+        textureVec.resize(V.size());
     }
 
     void freeIntegrationVectors()
@@ -75,6 +79,7 @@ extern "C"
          ros.clear();
          neighbors.clear();
          numNeighbors.clear();
+         textureVec.clear();
 
          V.shrink_to_fit();
          lambda.shrink_to_fit();
@@ -82,6 +87,7 @@ extern "C"
          ros.shrink_to_fit();
          neighbors.shrink_to_fit();
          numNeighbors.shrink_to_fit();
+         textureVec.shrink_to_fit();
 
          checkCudaErrors(curandDestroyGenerator(gen));
          freeArray(rands);
@@ -195,7 +201,25 @@ extern "C"
         float *dW = getWRawPtr();
         int *dPhase = getPhaseRawPtr();
 
-        checkCudaErrors(cudaBindTexture(0, oldPosTex, oldPos, numParticles*sizeof(float4)));
+        thrust::device_ptr<float> d_pos(oldPos);
+        thrust::device_ptr<float> d_W(dW);
+        thrust::device_ptr<int> d_Phase(dPhase);
+
+//        printf("particles\n");
+//        for (int i = 0; i < numParticles; i++)
+//        {
+//            printf("%.2f %.2f %.2f %.2f, ", (float)*(d_pos+i*4), (float)*(d_pos+i*4+1), (float)*(d_pos+i*4+2), (float)*(d_pos+i*4+3));
+//            printf("w: %.2f, phase: %d\n", (float)*(d_W+i), (int)*(d_Phase+i));
+//        }
+//        printf("\n");
+//        float4 *pos4 = (float4*)oldPos;
+        float *pos;
+        checkCudaErrors(cudaMalloc((void**)&pos, numParticles*4*sizeof(float)));
+//        textureVec.resize(4 * numParticles);
+//        float *pos = thrust::raw_pointer_cast(textureVec.data());
+        checkCudaErrors(cudaMemcpy(pos, oldPos, numParticles*4*sizeof(float), cudaMemcpyDeviceToDevice));
+
+        checkCudaErrors(cudaBindTexture(0, oldPosTex, pos, numParticles*sizeof(float4)));
         checkCudaErrors(cudaBindTexture(0, invMassTex, dW, numParticles*sizeof(float)));
         checkCudaErrors(cudaBindTexture(0, oldPhaseTex, dPhase, numParticles*sizeof(int)));
 
@@ -239,6 +263,8 @@ extern "C"
         checkCudaErrors(cudaUnbindTexture(oldPosTex));
         checkCudaErrors(cudaUnbindTexture(invMassTex));
         checkCudaErrors(cudaUnbindTexture(oldPhaseTex));
+
+        checkCudaErrors(cudaFree(pos));
     }
 
     void sortParticles(uint *dGridParticleHash, uint *dGridParticleIndex, uint numParticles)
@@ -425,6 +451,7 @@ extern "C"
      *                              SOLVE FLUIDS
      *****************************************************************************/
     void solveFluids(float *sortedPos,
+                     float *sortedW,
                      int   *sortedPhase,
                      uint  *gridParticleIndex,
                      uint  *cellStart,
@@ -435,6 +462,7 @@ extern "C"
                      float4 mousePos)
     {
         checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+        checkCudaErrors(cudaBindTexture(0, invMassTex, sortedW, numParticles*sizeof(float)));
         checkCudaErrors(cudaBindTexture(0, oldPhaseTex, sortedPhase, numParticles*sizeof(float4)));
         checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(uint)));
         checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(uint)));
@@ -453,7 +481,6 @@ extern "C"
 
         // execute the kernel
         findLambdasD<<< numBlocks, numThreads >>>(dLambda,
-                                                  (float4 *)sortedPos,
                                                   gridParticleIndex,
                                                   cellStart,
                                                   cellEnd,
@@ -464,7 +491,6 @@ extern "C"
 
         // execute the kernel
         solveFluidsD<<< numBlocks, numThreads >>>(dLambda,
-                                                  (float4 *)sortedPos,
                                                   gridParticleIndex,
                                                   (float4 *) particles,
                                                   numParticles,
@@ -476,6 +502,7 @@ extern "C"
         getLastCudaError("Kernel execution failed");
 
         checkCudaErrors(cudaUnbindTexture(oldPosTex));
+        checkCudaErrors(cudaUnbindTexture(invMassTex));
         checkCudaErrors(cudaUnbindTexture(oldPhaseTex));
         checkCudaErrors(cudaUnbindTexture(cellStartTex));
         checkCudaErrors(cudaUnbindTexture(cellEndTex));

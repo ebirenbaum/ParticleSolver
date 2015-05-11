@@ -4,8 +4,9 @@
 #define NO_COLLIDE -1
 #define FLUID 0
 #define GAS 1
-#define SOLID 2
-#define RIGID 3
+#define CLOTH 2
+#define SOLID 3
+#define RIGID 4
 
 #include "thrust/device_vector.h"
 

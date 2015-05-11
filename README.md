@@ -11,10 +11,10 @@ The simulation supports a variety of states of matter by representing the entire
   - Friction
   - Rope and cloth
   - Fluids
-  - Gasses
+  - Gases
 
 #### CPU demo scenes
-The following demo scenes are built in the CPU application, labelled with appropriate key commands to bring them up:
+The following demo scenes are built in the CPU application, labeled with appropriate key commands to bring them up:
 
   - *1* - A collapsing sand pile demonstrating frictional effect on angle of repose
   - *2* - Stiff stacks of rigid bodies
@@ -40,7 +40,26 @@ The following commands may also be useful:
   - *C* - toggle rendering of individual particles
 
 #### GPU demo scenes
-Logan!
+The following demo scenes are built in the GPU application, labeled with appropriate key commands to bring them up:
+
+  - *1* - A single rope demonstrating basic distance constraints
+  - *2* - A cloth created with a grid of distance constraints
+  - *3* - Two fluids settling, demonstrating the Rayleigh-Taylor instability
+  - *4* - A single stack of solid particles
+  - *5* - Multiple stacks of solid particles
+  - *6* - A grid of solid particles falling into a cloth net
+  - *7* - A giant ball of fluid being fluidy, and demonstrating surface tension
+  - *8* - A combo scene of solid particles, cloths, ropes, and an immovable sphere
+  - *9* - Hair...just hair
+
+Moving around in the scene:
+  - *W* - Move forward
+  - *A* - Move left
+  - *S* - Move backward
+  - *D* - Move right
+  - *Mouse* - Look around
+  - *Left Click* - Shoot particle into scene
+  - *Space* - Add fluid to scene at origin (not guaranteed to maintain stability)
 
 #### Pretty pictures
 

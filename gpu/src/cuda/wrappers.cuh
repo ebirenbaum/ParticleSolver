@@ -80,6 +80,7 @@ extern "C"
 
     ////////////////////////////////// FLUIDS ////////////////////////
     void solveFluids(float *sortedPos,
+                     float *sortedW,
                      int   *sortedPhase,
                      uint  *gridParticleIndex,
                      uint  *cellStart,
