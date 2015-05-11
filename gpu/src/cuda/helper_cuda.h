@@ -589,7 +589,7 @@ static const char *_cudaGetErrorEnum(cusparseStatus_t error)
             return "CUSPARSE_STATUS_SUCCESS";
 
 #ifdef CUDA_7
-        case CUSPARSE_STATUS_NOT_ INITIALIZED:
+        case CUSPARSE_STATUS_NOT_INITIALIZED:
             return "CUSPARSE_STATUS_NOT_INITIALIZED";
 #endif
 

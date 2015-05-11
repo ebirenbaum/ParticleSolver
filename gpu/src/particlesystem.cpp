@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <thrust/host_vector.h>
 
 
 #include "wrappers.cuh"
@@ -10,9 +11,8 @@
 #include "util.cuh"
 #include "shared_variables.cuh"
 #include "helper_math.h"
-//#include "kernel.cuh"
 
-//#include "debugprinting.h"
+#include "debugprinting.h"
 
 ParticleSystem::ParticleSystem(uint numParticles, float particleRadius, uint3 gridSize, uint maxParticles, int3 minBounds, int3 maxBounds, int iterations)
     : m_initialized(false),
@@ -94,81 +94,10 @@ void ParticleSystem::update(float deltaTime)
     // update constants
     setParameters(&m_params);
 
-    /* ALGORITHM 1 SIMULATION LOOP */
-
-    /**********************************************************************************
-     * 1    for all particles i do:
-     * 2 (x)    apply forces vi = vi + deltaTime * forcesExt(xi)
-     * 3 (x)    apply forces xi* = xi + deltaTime * vi
-     * 4        apply mass scaling mi* = mi * exp(-k*h(xi*))
-     * 5    end for
-     */
 
     integrateSystem(dPos,
                     deltaTime,
                     m_numParticles);
-
-    /**********************************************************************************
-     * 6    for all particles i do:
-     * 7        find neighboring particles Ni(xi*)
-     * 8        find solid contacts
-     * 9    end for
-     */
-
-//    // calculate grid hash
-//    calcHash(   m_dGridParticleHash,
-//                m_dGridParticleIndex,
-//                dPos,
-//                m_numParticles);
-
-//    // sort particles based on hash
-//    sortParticles(m_dGridParticleHash, m_dGridParticleIndex, m_numParticles);
-
-//    // reorder particle arrays into sorted order and
-//    // find start and end of each cell
-//    reorderDataAndFindCellStart(
-//                m_dCellStart,
-//                m_dCellEnd,
-//                m_dSortedPos,
-//                m_dGridParticleHash,
-//                m_dGridParticleIndex,
-//                dPos,
-//                m_numParticles,
-//                m_numGridCells);
-
-
-    //    /**********************************************************************************
-    //     * 10   while iter < stabalizationIterations do:
-    //     * 11       deltaX = 0, n = 0
-    //     * 12       solve contact constraints for deltaX, n
-    //     * 13       update x  =  x + deltaX / n
-    //     * 14       update x* = x* + deltaX / n
-    //     * 15   end while
-    //     */
-
-//    collide(    dPos,
-//                m_dSortedPos,
-//                m_dGridParticleIndex,
-//                m_dCellStart,
-//                m_dCellEnd,
-//                m_numParticles,
-//                m_numGridCells);
-
-//    collideWorld(dPos,
-//                 m_numParticles);
-
-    /**********************************************************************************
-     * 16   while iter < solverIterations do:
-     * 17       for each constraint group G do:
-     * 18           deltaX = 0, n = 0
-     * 19           solve all constraints in G for deltaX, n
-     * 24           update x* = x* + deltaX / n
-     * 21       end for
-     * 22   end while
-     */
-
-    sortByType(dPos,
-               m_numParticles);
 
     for (uint i = 0; i < m_solverIterations; i++)
     {
@@ -206,15 +135,15 @@ void ParticleSystem::update(float deltaTime)
                     m_numParticles,
                     m_numGridCells);
 
-        solveFluids(    m_dSortedPos,
-                        m_dSortedPhase,
-                        m_dGridParticleIndex,
-                        m_dCellStart,
-                        m_dCellEnd,
-                        dPos,
-                        m_numParticles,
-                        m_numGridCells,
-                        mousePos);
+        solveFluids(m_dSortedPos,
+                    m_dSortedPhase,
+                    m_dGridParticleIndex,
+                    m_dCellStart,
+                    m_dCellEnd,
+                    dPos,
+                    m_numParticles,
+                    m_numGridCells,
+                    mousePos);
 
         collideWorld(dPos,
                      m_dSortedPos,
@@ -228,16 +157,6 @@ void ParticleSystem::update(float deltaTime)
         solvePointConstraints(dPos);
 
     }
-
-
-    /**********************************************************************************
-     * 23   for all particles i do:
-     * 24       update velocity v = (xi* - xi) / deltaTime:
-     * 25       advect diffuse particles
-     * 26       apply internal forces fDrag, fVort
-     * 27       update positions xi = xi* or apply sleeping
-     * 28   end for
-     */
 
     calcVelocity(dPos,
                  deltaTime,
@@ -295,23 +214,9 @@ void ParticleSystem::addFluids()
     m_colorIndex.push_back(make_int2(start, m_numParticles));
     m_colors.push_back(make_float4(make_float3(color), 1.f));
 }
+
 void ParticleSystem::addFluidBlock()
-{
-//    if (m_particlesToAdd.empty())
-//        return;
-
-//    uint size = m_particlesToAdd.size() / 2;
-//    int3 ll, ur;
-//    for (uint i = 0; i < size; i++)
-//    {
-//        ll = m_fluidsToAdd.front();
-//        m_fluidsToAdd.pop_front();
-//        ur = m_fluidsToAdd.front();
-//        m_fluidsToAdd.pop_front();
-//        addFluid(ll, ur, 1.f, 1.5f);
-//    }
-
-}
+{}
 
 
 void ParticleSystem::setParticleToAdd(float3 pos, float3 vel, float mass)
@@ -323,7 +228,7 @@ void ParticleSystem::setParticleToAdd(float3 pos, float3 vel, float mass)
     m_particlesToAdd.push_back(make_float4(vel, mass));
 
     m_colorIndex.push_back(make_int2(m_numParticles, m_numParticles+1));
-    m_colors.push_back(make_float4(frand(), frand(), frand(), 1.f));
+    m_colors.push_back(make_float4(colors[rand() % numColors], 1.f));
 }
 
 
@@ -339,10 +244,33 @@ void ParticleSystem::addParticle(float4 pos, float4 vel, float mass, float ro, i
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     registerGLBufferObject(m_posVbo, &m_cuda_posvbo_resource);
 
-    appendIntegrationParticle(vel, ro, 1);
-    appendPhaseAndMass(phase, mass, 1);
-    appendSolverParticle();
+    float *hv = (float*)&vel;
+    float *hro = &ro;
+    int *hphase = &phase;
+    float w = 1.f / mass;
+    float *hw = &w;
+
+    appendIntegrationParticle(hv, hro, 1);
+    appendPhaseAndMass(hphase, hw, 1);
+    appendSolverParticle(1);
     m_numParticles++;
+}
+
+void ParticleSystem::addParticleMultiple(float *pos, float *vel, float *mass, float *ro, int *phase, int numParticles)
+{
+    if (m_numParticles == m_maxParticles)
+        return;
+
+    unregisterGLBufferObject(m_cuda_posvbo_resource);
+    glBindBuffer(GL_ARRAY_BUFFER, m_posVbo);
+    glBufferSubData(GL_ARRAY_BUFFER, m_numParticles*4*sizeof(float), numParticles*4*sizeof(float), pos);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    registerGLBufferObject(m_posVbo, &m_cuda_posvbo_resource);
+
+    appendIntegrationParticle(vel, ro, numParticles);
+    appendPhaseAndMass(phase, mass, numParticles);
+    appendSolverParticle(numParticles);
+    m_numParticles += numParticles;
 }
 
 void ParticleSystem::setFluidToAdd(float3 pos, float3 color, float mass, float density)
@@ -360,7 +288,13 @@ void ParticleSystem::addFluid(int3 ll, int3 ur, float mass, float density, float
 
     int3 count = make_int3((int)ceil(ur.x - ll.x) / distance, (int)ceil(ur.y - ll.y) / distance, (int)ceil(ur.z - ll.z) / distance);
 
-    float4 pos;
+    int arraySize = count.x * count.y * count.z;
+    float pos[arraySize * 4];
+    float vel[arraySize * 4];
+    float w[arraySize];
+    float ro[arraySize];
+    int phase[arraySize];
+    int index = 0;
 
 #ifndef TWOD
     for (int z = 0; z < count.z; z++)
@@ -370,21 +304,27 @@ void ParticleSystem::addFluid(int3 ll, int3 ur, float mass, float density, float
         {
             for (int x = 0; x < count.x; x++)
             {
-                pos = make_float4(ll.x + x * distance + (frand()*2.0f-1.0f)*jitter,
-                                  ll.y + y * distance + (frand()*2.0f-1.0f)*jitter,
+                pos[index * 4] = ll.x + x * distance + (frand()*2.0f-1.0f)*jitter;
+                pos[index*4+1] = ll.y + y * distance + (frand()*2.0f-1.0f)*jitter;
             #ifdef TWOD
-                                  ZPOS,
+                pos[index*4+2] = ZPOS;
             #else
-                                  ll.z + z * distance + (frand()*2.0f-1.0f)*jitter,
+                pos[index*4+2] = ll.z + z * distance + (frand()*2.0f-1.0f)*jitter;
             #endif
-                                  1.f);
+                pos[index*4+3] = 1.f;
 
-                addParticle(pos, make_float4(0.f), mass, density, FLUID);
+                index++;
             }
         }
 #ifndef TWOD
     }
 #endif
+    memset(vel, 0, arraySize * 4 * sizeof(float));
+    std::fill(w, w + arraySize, 1.f / mass);
+    std::fill(ro, ro + arraySize, density);
+    std::fill(phase, phase + arraySize, FLUID);
+
+    addParticleMultiple(pos, vel, w, ro, phase, arraySize);
 
     m_colorIndex.push_back(make_int2(start, m_numParticles));
     m_colors.push_back(make_float4(color, 1.f));
@@ -401,7 +341,13 @@ void ParticleSystem::addParticleGrid(int3 ll, int3 ur, float mass, bool addJitte
 
     int3 count = make_int3((int)ceil(ur.x - ll.x) / distance, (int)ceil(ur.y - ll.y) / distance, (int)ceil(ur.z - ll.z) / distance);
 
-    float4 pos;
+    int arraySize = count.x * count.y * count.z;
+    float pos[arraySize * 4];
+    float vel[arraySize * 4];
+    float w[arraySize];
+    float ro[arraySize];
+    int phase[arraySize];
+    int index = 0;
 
 #ifndef TWOD
     for (int z = 0; z < count.z; z++)
@@ -411,24 +357,30 @@ void ParticleSystem::addParticleGrid(int3 ll, int3 ur, float mass, bool addJitte
         {
             for (int x = 0; x < count.x; x++)
             {
-                pos = make_float4(ll.x + x * distance + (frand()*2.0f-1.0f)*jitter,
-                                  ll.y + y * distance + (frand()*2.0f-1.0f)*jitter,
+                pos[index * 4] = ll.x + x * distance + (frand()*2.0f-1.0f)*jitter;
+                pos[index*4+1] = ll.y + y * distance + (frand()*2.0f-1.0f)*jitter;
             #ifdef TWOD
-                                  ZPOS,
+                pos[index*4+2] = ZPOS;
             #else
-                                  ll.z + z * distance + (frand()*2.0f-1.0f)*jitter,
+                pos[index*4+2] = ll.z + z * distance + (frand()*2.0f-1.0f)*jitter;
             #endif
-                                  1.f);
+                pos[index*4+3] = 1.f;
 
-                addParticle(pos, make_float4(0.f), mass, 1.f, SOLID);
+                index++;
             }
         }
 #ifndef TWOD
     }
 #endif
+    memset((void*)vel, 0, arraySize * 4 * sizeof(float));
+    std::fill(w, w + arraySize, 1.f / mass);
+    std::fill(ro, ro + arraySize, 1.f);
+    std::fill(phase, phase + arraySize, SOLID);
+
+    addParticleMultiple(pos, vel, w, ro, phase, arraySize);
 
     m_colorIndex.push_back(make_int2(start, m_numParticles));
-    m_colors.push_back(make_float4(frand(), frand(), frand(), 1.f));
+    m_colors.push_back(make_float4(colors[rand() % numColors], 1.f));
 }
 
 
@@ -438,7 +390,29 @@ void ParticleSystem::addHorizCloth(int2 ll, int2 ur, float3 spacing, float2 dist
 
     int2 count = make_int2((int)ceil(ur.x - ll.x) / spacing.x, (int)ceil(ur.y - ll.y) / spacing.z);
 
-    float4 pos;
+    // particle setup
+    int arraySize = count.x * count.y;
+    float pos[arraySize * 4];
+    float vel[arraySize * 4];
+    float w[arraySize];
+    float ro[arraySize];
+    int phase[arraySize];
+    int index = 0;
+
+    // constraint setup
+    uint numDists = (count.x-1) * (count.y-1) + count.x * count.y - 1;
+    uint numPoints;
+    if (holdEdges)
+        numPoints = 2 * (count.x + count.y);
+    else
+        numPoints = count.y;
+
+    float points[numPoints * 3];
+    uint indicesP[numPoints];
+    int pi = 0, di = 0;
+
+    uint indicesD[numDists * 2];
+    float dists[numDists];
 
 #ifndef TWOD
     for (int z = 0; z < count.y; z++)
@@ -446,60 +420,124 @@ void ParticleSystem::addHorizCloth(int2 ll, int2 ur, float3 spacing, float2 dist
 #endif
         for (int x = 0; x < count.x; x++)
         {
-            pos = make_float4(ll.x + x * spacing.x,
-                              spacing.y,
+            pos[index * 4] = ll.x + x * spacing.x,
+            pos[index*4+1] = spacing.y,
         #ifdef TWOD
-                              ZPOS,
+            pos[index*4+2] = ZPOS,
         #else
-                              ll.y + z * spacing.z,
+            pos[index*4+2] = ll.y + z * spacing.z,
         #endif
-                              1.f);
+            pos[index*4+3] = 1.f;
 
-            addParticle(pos, make_float4(0.f), mass, 1.f, RIGID + m_rigidIndex);
+//            addParticle(pos, make_float4(0.f), mass, 1.f, RIGID + m_rigidIndex);
 
-            uint index = start + z * count.x + x;
+            uint particleIndex = start + z * count.x + x;
             if (x > 0)
-                addDistanceConstraint(make_uint2(index - 1, index), dist.x);
+            {
+                indicesD[di*2] = particleIndex - 1;
+                indicesD[di*2+1] = particleIndex;
+                dists[di] = dist.x;
+                di++;
+            }
             else
-                addPointConstraint(index, make_float3(pos));
+            {
+                indicesP[pi] = particleIndex;
+                memcpy(points+pi*3, pos+index * 4, 3*sizeof(float));
+//                points[pi*3] = pos.x; points[pi*3+1] = pos.y; points[pi*3+2] = pos.z;
+                pi++;
+            }
             if (z > 0)
-                addDistanceConstraint(make_uint2(index - count.x, index), dist.y);
+            {
+                indicesD[di*2] = particleIndex - count.x;
+                indicesD[di*2+1] = particleIndex;
+                dists[di] = dist.y;
+                di++;
+            }
             else if (holdEdges)
-                addPointConstraint(index, make_float3(pos));
+            {
+                indicesP[pi] = particleIndex;
+                memcpy(points+pi*3, pos+index * 4, 3*sizeof(float));
+//                points[pi*3] = pos.x; points[pi*3+1] = pos.y; points[pi*3+2] = pos.z;
+                pi++;
+            }
             if (x == count.x - 1 && holdEdges)
-                addPointConstraint(index, make_float3(pos));
+            {
+                indicesP[pi] = particleIndex;
+                memcpy(points+pi*3, pos+index * 4, 3*sizeof(float));
+//                points[pi*3] = pos.x; points[pi*3+1] = pos.y; points[pi*3+2] = pos.z;
+                pi++;
+            }
             if (z == count.y - 1 && holdEdges)
-                addPointConstraint(index, make_float3(pos));
-
-
+            {
+                indicesP[pi] = particleIndex;
+                memcpy(points+pi*3, pos+index * 4, 3*sizeof(float));
+//                points[pi*3] = pos.x; points[pi*3+1] = pos.y; points[pi*3+2] = pos.z;
+                pi++;
+            }
+            index++;
         }
 #ifndef TWOD
     }
 #endif
+    memset((void*)vel, 0, arraySize * 4 * sizeof(float));
+    std::fill(w, w + arraySize, 1.f / mass);
+    std::fill(ro, ro + arraySize, 1.f);
+    std::fill(phase, phase + arraySize, RIGID + m_rigidIndex);
+
+    addParticleMultiple(pos, vel, w, ro, phase, arraySize);
+    addPointConstraint(indicesP, points, numPoints);
+    addDistanceConstraint(indicesD, dists, numDists);
 
     m_colorIndex.push_back(make_int2(start, m_numParticles));
-    m_colors.push_back(make_float4(frand(), frand(), frand(), 1.f));
+    m_colors.push_back(make_float4(colors[rand() % numColors], 1.f));
     m_rigidIndex++;
 }
 
 void ParticleSystem::addRope(float3 start, float3 spacing, float dist, int numLinks, float mass, bool constrainStart)
 {
-    int startI = m_numParticles;
+    uint startI = m_numParticles;
 
-    addParticle(make_float4(start, 1.f), make_float4(0.f), mass, 1.f, RIGID + m_rigidIndex);
-    if (constrainStart)
-        addPointConstraint(startI, start);
+    // particle setup
+    int arraySize = numLinks+1;
+    float pos[arraySize * 4];
+    float vel[arraySize * 4];
+    float w[arraySize];
+    float ro[arraySize];
+    int phase[arraySize];
 
-    float4 pos;
-    for (int i = 1; i < numLinks; i++)
+    pos[0] = start.x; pos[1] = start.y; pos[2] = start.z; pos[3] = 1.f;
+
+    float4 pos4;
+
+    uint indicesD[numLinks * 2];
+    float dists[numLinks];
+    int di = 0;
+
+    int i;
+    for (i = 1; i <= numLinks; i++)
     {
-        pos = make_float4(start + i * spacing, 1.f);
-        addParticle(pos, make_float4(0.f), mass, 1.f, RIGID + m_rigidIndex);
-        addDistanceConstraint(make_uint2(startI + i-1, startI + i), dist);
+        pos4 = make_float4(start + i * spacing, 1.f);
+        memcpy(pos+i*4, &pos4, 4*sizeof(float));
+//        pos[i*4] = pos4.x; pos[i*4+1] = pos4.y; pos[i*4+2] = pos4.z; pos[i*4+3] = pos4.w;
+
+        indicesD[di*2] = startI + i - 1;
+        indicesD[di*2+1] = startI + i;
+        dists[di] = dist;
+        di++;
     }
+    memset((void*)vel, 0, arraySize * 4 * sizeof(float));
+    std::fill(w, w + arraySize, 1.f / mass);
+    std::fill(ro, ro + arraySize, 1.f);
+    std::fill(phase, phase + arraySize, RIGID + m_rigidIndex);
+
+    addParticleMultiple(pos, vel, w, ro, phase, arraySize);
+    addDistanceConstraint(indicesD, dists, numLinks);
+
+    if (constrainStart)
+        addPointConstraint(&startI, (float*)&start, 1);
 
     m_colorIndex.push_back(make_int2(startI, m_numParticles));
-    m_colors.push_back(make_float4(.5f, .4f, .2f, 1.f));
+    m_colors.push_back(make_float4(colors[rand() % numColors], 1));
     m_rigidIndex++;
 }
 
@@ -530,8 +568,9 @@ void ParticleSystem::addStaticSphere(int3 ll, int3 ur, float spacing)
                                   1.f);
                 if (length(make_float3(pos) - center) < radius)
                 {
+                    uint index = m_numParticles - 1;
                     addParticle(pos, make_float4(0.f), 10.f, 1.f, RIGID + m_rigidIndex);
-                    addPointConstraint(m_numParticles-1, make_float3(pos));
+                    addPointConstraint(&index,(float*)&pos, 1);
                 }
             }
         }
@@ -540,7 +579,7 @@ void ParticleSystem::addStaticSphere(int3 ll, int3 ur, float spacing)
 #endif
 
     m_colorIndex.push_back(make_int2(startI, m_numParticles));
-    m_colors.push_back(make_float4(frand(),frand(),frand(), 1.f));
+    m_colors.push_back(make_float4(colors[rand() % numColors], 1.f));
     m_rigidIndex++;
 
 
@@ -549,12 +588,12 @@ void ParticleSystem::addStaticSphere(int3 ll, int3 ur, float spacing)
 
 void ParticleSystem::makePointConstraint(uint index, float3 point)
 {
-    addPointConstraint(index, point);
+    addPointConstraint(&index, (float*)&point, 1);
 }
 
 void ParticleSystem::makeDistanceConstraint(uint2 index, float distance)
 {
-    addDistanceConstraint(index, distance);
+    addDistanceConstraint((uint*)&index, &distance, 1);
 }
 
 

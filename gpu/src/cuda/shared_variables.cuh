@@ -13,7 +13,7 @@ extern "C"
 {
 	void freeSharedVectors();
 
-    void appendPhaseAndMass(int fase, uint mass, uint iterations);
+    void appendPhaseAndMass(int *fase, float *w, uint numParticles);
 
 	void copyToXstar(float *pos, uint numParticles);
 	

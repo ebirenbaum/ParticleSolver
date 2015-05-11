@@ -3,6 +3,7 @@
 #include "thrust/device_vector.h"
 #include "helper_cuda.h"
 #include "cuda_runtime.h"
+#include "util.cuh"
 
 thrust::device_vector<float> Xstar;	// guess vectors
 thrust::device_vector<float> W;     // vector of inverse masses
@@ -28,17 +29,24 @@ extern "C"
         phase.shrink_to_fit();
 	}
 
-    void appendPhaseAndMass(int fase, uint mass, uint iterations)
+    void appendPhaseAndMass(int *fase, float *w, uint numParticles)
     {
-        for (int i = 0; i < iterations; i++)
-        {
-            phase.push_back(fase);
-            Xstar.push_back(0.f);
-            Xstar.push_back(0.f);
-            Xstar.push_back(0.f);
-            Xstar.push_back(0.f);
-            W.push_back(1.f / mass);
-        }
+        int sizeW = W.size();
+
+        // resize the vectors
+        phase.resize(sizeW + numParticles);
+        W.resize(sizeW + numParticles);
+
+        // get raw pointers to the data
+        int *dPhase = thrust::raw_pointer_cast(phase.data());
+        float *dW = thrust::raw_pointer_cast(W.data());
+
+        // copy the new data to the gpu
+        copyArrayToDevice(dPhase + sizeW, fase, 0, numParticles * sizeof(int));
+        copyArrayToDevice(dW + sizeW, w, 0, numParticles * sizeof(float));
+
+        // resize but don't neet to fill
+        Xstar.resize(4 * W.size());
     }
 
 	void copyToXstar(float *pos, uint numParticles)

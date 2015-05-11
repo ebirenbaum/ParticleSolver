@@ -11,7 +11,7 @@ extern "C"
      */
     void initIntegration();
 
-    void appendIntegrationParticle(float4 v, float ro, uint iterations);
+    void appendIntegrationParticle(float *v, float *ro, uint iterations);
 
     void freeIntegrationVectors();
 
@@ -67,10 +67,10 @@ extern "C"
     void initHandles();
     void destroyHandles();
 
-    void appendSolverParticle();
+    void appendSolverParticle(uint numParticles);
 
-    void addPointConstraint(uint index, float3 point);
-    void addDistanceConstraint(uint2 index, float distance);
+    void addPointConstraint(uint *index, float *point, uint numConstraints);
+    void addDistanceConstraint(uint *index, float *distance, uint numConstraints);
 
     void freeSolverVectors();
 

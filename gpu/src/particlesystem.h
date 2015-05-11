@@ -4,9 +4,20 @@
 #include "kernel.cuh"
 #include <deque>
 #include <vector>
+#include "helper_math.h"
 
 typedef unsigned int GLuint;
 typedef unsigned int uint;
+
+const int numColors = 8;
+const float3 colors[numColors] = {  make_float3(.722f, .141f, .447f),
+                                    make_float3(.886f, .455f, .173f),
+                                    make_float3(.110f, .569f, .478f),
+                                    make_float3(.588f, .824f, .161f),
+                                    make_float3(.722f, .267f, .506f),
+                                    make_float3(.831f, .345f, .031f),
+                                    make_float3(.020f, .533f, .431f),
+                                    make_float3(.506f, .773f, .027f)};
 
 class ParticleSystem
 {
@@ -50,6 +61,7 @@ private:
     void setArray(bool isVboArray, const float *data, int start, int count);
 
     void addParticle(float4 pos, float4 vel, float mass, float ro, int phase);
+    void addParticleMultiple(float *pos, float *vel, float *mass, float *ro, int *phase, int numParticles);
     void addParticles();
 
     void addFluids();

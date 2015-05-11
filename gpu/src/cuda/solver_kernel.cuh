@@ -311,5 +311,22 @@ struct rigid_body_functor
      }
 };
 
+
+struct occurence_functor
+{
+    uint *occ;
+
+    __host__ __device__
+    occurence_functor(uint *_occ)
+        : occ(_occ) {}
+
+    template <typename Tuple>
+    __device__
+    void operator()(Tuple t)
+    {
+        occ[thrust::get<0>(t)] += thrust::get<1>(t);
+    }
+};
+
 #endif // SOLVER_KERNEL_H
 

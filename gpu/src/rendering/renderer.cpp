@@ -18,7 +18,7 @@
 #include <gtc/type_ptr.hpp>
 #include <gtx/norm.hpp>
 
-#include"debugprinting.h"
+//#include"debugprinting.h"
 
 Renderer::Renderer(int3 minBounds, int3 maxBounds)
     : m_program(0),
@@ -366,7 +366,7 @@ void Renderer::resize(int w, int h)
 
 void Renderer::_buildGrid(int3 minBounds, int3 maxBounds)
 {
-    int spacing = 3;
+    int spacing = 4;
     int maxDistX = maxBounds.x - minBounds.x;
     int maxDistZ = maxBounds.z - minBounds.z;
     int numX = maxDistX / spacing;
@@ -478,7 +478,7 @@ void Renderer::_buildGrid(int3 minBounds, int3 maxBounds)
 
     data[index++] = minBounds.x; data[index++] = maxBounds.y; data[index++] = minBounds.z;
 
-    cout << index << ", " << size << endl;
+//    cout << index << ", " << size << endl;
 
 //    m_numGridVerts = 0;
 //    size = 12;

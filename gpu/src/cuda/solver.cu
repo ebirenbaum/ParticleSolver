@@ -5,6 +5,16 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
+#include <thrust/for_each.h>
+#include <thrust/iterator/zip_iterator.h>
+#include <thrust/sort.h>
+#include <thrust/reduce.h>
+#include <thrust/transform.h>
+
+#include <stdio.h>
+
 
 #include <cublas_v2.h>
 #include <cusparse.h>
@@ -13,16 +23,6 @@
 #include "solver_kernel.cuh"
 #include "util.cuh"
 #include "shared_variables.cuh"
-
-#include "thrust/device_ptr.h"
-#include "thrust/device_vector.h"
-#include "thrust/for_each.h"
-#include "thrust/iterator/zip_iterator.h"
-#include "thrust/sort.h"
-#include "thrust/reduce.h"
-#include "thrust/transform.h"
-
-#include <stdio.h>
 
 
 cublasHandle_t cublasHandle;
@@ -61,39 +61,98 @@ extern "C"
         checkCudaErrors(cusparseDestroy(cusparseHandle));
     }
 
-    void appendSolverParticle()
+    void appendSolverParticle(uint numParticles)
     {
-        occurences.push_back(0);
+        uint sizeO = occurences.size();
+        occurences.resize(sizeO + numParticles);
+        uint *dOcc = thrust::raw_pointer_cast(occurences.data());
+        checkCudaErrors(cudaMemset(dOcc + sizeO, 0, numParticles * sizeof(uint)));
     }
 
-    void addPointConstraint(uint index, float3 point)
+    void updateOccurences(uint *index, uint num)
     {
-        pointsI.push_back(index);
-        points.push_back(point.x);
-        points.push_back(point.y);
-        points.push_back(point.z);
-        occurences[index] += 1;
+        thrust::device_vector<uint> dvIndex(index, index + num);
+        thrust::device_vector<uint> dvSorted(num);
+        thrust::device_vector<uint> dvOnes(num, 1);
+
+        thrust::device_ptr<uint> d_Index(dvIndex.data());
+        thrust::device_ptr<uint> d_Ones(dvOnes.data());
+        thrust::device_ptr<uint> d_Sorted(dvSorted.data());
+
+        thrust::sort(dvIndex.begin(), dvIndex.end());
+
+//        printf("sorted: %u\n", dvIndex.size());
+//        for (uint i = 0; i < dvIndex.size(); i++)
+//        {
+//            printf("%u\n", (uint)*(d_Index + i));
+//        }
+
+        thrust::pair<thrust::device_ptr<uint>,thrust::device_ptr<uint> > new_end;
+        new_end = thrust::reduce_by_key(d_Index, d_Index + num, d_Ones, d_Sorted, d_Ones);
+
+//        printf("reduced: %u\n", dvIndex.size());
+//        for (uint i = 0; i < dvIndex.size(); i++)
+//        {
+//            printf("%u\n", (uint)*(d_Index + i));
+//        }
+
+
+        uint *dOcc = thrust::raw_pointer_cast(occurences.data());
+
+        thrust::for_each(
+            thrust::make_zip_iterator(thrust::make_tuple(d_Sorted, d_Ones)),
+            thrust::make_zip_iterator(thrust::make_tuple(new_end.first, new_end.second)),
+            occurence_functor(dOcc));
     }
 
-    void addDistanceConstraint(uint2 index, float distance)
+    void addPointConstraint(uint *index, float *point, uint numConstraints)
     {
-        distsI.push_back(index.x);
-        distsI.push_back(index.y);
-        dists.push_back(distance);
-        occurences[index.x] += 1;
-        occurences[index.y] += 1;
+        uint sizeP = points.size();
+        uint sizeI = pointsI.size();
 
-        sortedI.push_back(0);
-        sortedI.push_back(0);
+        points.resize(sizeP + 3 * numConstraints);
+        pointsI.resize(sizeI + numConstraints);
 
-        deltas.push_back(0.f);
-        deltas.push_back(0.f);
-        deltas.push_back(0.f);
-        deltas.push_back(0.f);
-        deltas.push_back(0.f);
-        deltas.push_back(0.f);
-        deltas.push_back(0.f);
-        deltas.push_back(0.f);
+        float *dPoints = thrust::raw_pointer_cast(points.data());
+        uint *dPointsI = thrust::raw_pointer_cast(pointsI.data());
+
+        copyArrayToDevice(dPoints + sizeP, point, 0, 3 * numConstraints * sizeof(float));
+        copyArrayToDevice(dPointsI + sizeI, index, 0, numConstraints * sizeof(uint));
+
+        updateOccurences(index, numConstraints);
+    }
+
+    void addDistanceConstraint(uint *index, float *distance, uint numConstraints)
+    {
+        uint sizeD = dists.size();
+        uint sizeI = distsI.size();
+
+        dists.resize(sizeD + numConstraints);
+        distsI.resize(sizeI + 2 * numConstraints);
+
+        float *dDists = thrust::raw_pointer_cast(dists.data());
+        uint *dDistsI = thrust::raw_pointer_cast(distsI.data());
+
+        copyArrayToDevice(dDists + sizeD, distance, 0, numConstraints * sizeof(float));
+        copyArrayToDevice(dDistsI + sizeI, index, 0, 2 * numConstraints * sizeof(uint));
+
+//        thrust::device_ptr<uint> dOcc(occurences.data());
+//        printf("before: \n");
+//        for (uint i = 0; i < occurences.size(); i++)
+//        {
+//            printf("%u\n", (uint)*(dOcc + i));
+//        }
+
+        sortedI.resize(distsI.size());
+        deltas.resize(8 * dists.size());
+
+        updateOccurences(index, 2 * numConstraints);
+
+//        printf("after: \n");
+//        for (uint i = 0; i < occurences.size(); i++)
+//        {
+//            printf("%u\n", (uint)*(dOcc + i));
+//        }
     }
 
     void freeSolverVectors()

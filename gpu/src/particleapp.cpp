@@ -28,7 +28,7 @@ ParticleApp::ParticleApp()
     cudaInit();
 
     m_particleSystem = new ParticleSystem(NUM_PARTICLES, PARTICLE_RADIUS, GRID_SIZE, MAX_PARTICLES, make_int3(-50, 0, -50), make_int3(50, 200, 50), 5);
-    makeInitScene();
+//    makeInitScene();
     m_renderer = new Renderer(m_particleSystem->getMinBounds(), m_particleSystem->getMaxBounds());
     m_renderer->createVAO(m_particleSystem->getCurrentReadBuffer(),
                           m_particleSystem->getParticleRadius());
@@ -201,6 +201,7 @@ void ParticleApp::keyReleased(QKeyEvent *e)
     case Qt::Key_8:
         delete m_particleSystem;
         m_particleSystem = new ParticleSystem(NUM_PARTICLES, PARTICLE_RADIUS, GRID_SIZE, MAX_PARTICLES, make_int3(-50, 0, -50), make_int3(50, 200, 50), 5);
+        m_particleSystem->addRope(make_float3(0, 20, 0), make_float3(0, -.5, 0), .4f, 32, 1.f, true);
         break;
     case Qt::Key_9:
         delete m_particleSystem;

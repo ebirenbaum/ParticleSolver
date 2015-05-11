@@ -44,19 +44,26 @@ extern "C"
         checkCudaErrors(curandSetPseudoRandomGeneratorSeed(gen, 1234ULL));
     }
 
-    void appendIntegrationParticle(float4 v, float ro, uint iterations)
+    void appendIntegrationParticle(float *v, float *ro, uint numParticles)
     {
-        for (int i = 0; i < iterations; i++)
-        {
-            V.push_back(v.x);
-            V.push_back(v.y);
-            V.push_back(v.z);
-            V.push_back(v.w);
+        int sizeV = V.size();
+        int sizeRo = ros.size();
 
-            ros.push_back(ro);
-            numNeighbors.push_back(0);
-            lambda.push_back(0.f);
-        }
+        // resize the vectors
+        V.resize(sizeV + 4 * numParticles);
+        ros.resize(sizeRo + numParticles);
+
+        // get raw pointers to the data
+        float *dV = thrust::raw_pointer_cast(V.data());
+        float *dRos = thrust::raw_pointer_cast(ros.data());
+
+        // copy the new data over to the gpu
+        copyArrayToDevice(dV + sizeV, v, 0, 4 * numParticles * sizeof(float));
+        copyArrayToDevice(dRos + sizeRo, ro, 0, numParticles * sizeof(float));
+
+        // resize but don't need to fill
+        lambda.resize(ros.size());
+        numNeighbors.resize(ros.size());
         neighbors.resize(V.size() * MAX_FLUID_NEIGHBORS);
     }
 
