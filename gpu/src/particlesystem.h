@@ -22,7 +22,7 @@ const float3 colors[numColors] = {  make_float3(.722f, .141f, .447f),
 class ParticleSystem
 {
 public:
-    ParticleSystem(uint numParticles, float particleRadius, uint3 gridSize, uint maxParticles, int3 minBounds, int3 maxBounds, int iterations);
+    ParticleSystem(float particleRadius, uint3 gridSize, uint maxParticles, int3 minBounds, int3 maxBounds, int iterations);
     ~ParticleSystem();
 
     void update(float deltaTime);
@@ -40,9 +40,9 @@ public:
     void makePointConstraint(uint index, float3 point);
     void makeDistanceConstraint(uint2 index, float distance);
 
+    // getters
     std::vector<int2> getColorIndex() { return m_colorIndex; }
     std::vector<float4> getColors() { return m_colors; }
-
 
     GLuint getCurrentReadBuffer() const { return m_posVbo; }
     uint getNumParticles() const { return m_numParticles; }
@@ -51,7 +51,7 @@ public:
     int3 getMinBounds() { return m_minBounds; }
     int3 getMaxBounds() { return m_maxBounds; }
 
-    float4 mousePos;
+//    float4 mousePos;
 
 private:
     void _init(uint numParticles, uint maxParticles);
@@ -65,7 +65,6 @@ private:
     void addParticles();
 
     void addFluids();
-    void addFluidBlock();
 
     void addNewStuff();
 
@@ -75,8 +74,6 @@ private:
 
     uint m_maxParticles;
     uint m_numParticles;
-//    uint m_numPointConstraints;
-//    uint m_numDistanceConstraints;
 
     // GPU data
     float *m_dSortedPos;
@@ -91,12 +88,6 @@ private:
 
     uint   m_gridSortBits;
 
-//    uint *m_dPointConstraintIndex;
-//    float *m_dPointConstraintPoint;
-
-//    uint *m_dDistanceConstraintIndex;
-//    float *m_dDistanceConstraint;
-
     // vertex buffer object for particle positions
     GLuint   m_posVbo;
 
@@ -108,14 +99,18 @@ private:
     uint3 m_gridSize;
     uint m_numGridCells;
 
+    // phase number for rigid bodies
     int m_rigidIndex;
 
+    // to store particles that need to be added
     std::deque<float4> m_particlesToAdd;
     std::deque<float4> m_fluidsToAdd;
 
+    // particle colors
     std::vector<int2> m_colorIndex;
     std::vector<float4> m_colors;
 
+    // scene boundaries
     int3 m_minBounds;
     int3 m_maxBounds;
 

@@ -68,7 +68,6 @@ void View::initializeGL()
     // Start a timer that will try to get 60 frames per second (the actual
     // frame rate depends on the operating system and other running programs)
     time.start();
-//    timer.start();
     timer.start(1000 / 60);
 
     // Center the mouse, which is explained more in mouseMoveEvent() below.
@@ -76,7 +75,7 @@ void View::initializeGL()
     // the fullscreen window and will not automatically receive mouse move
     // events. This occurs if there are two monitors and the mouse is on the
     // secondary monitor.
-//    QCursor::setPos(mapToGlobal(QPoint(width() / 2, height() / 2)));
+    QCursor::setPos(mapToGlobal(QPoint(width() / 2, height() / 2)));
 }
 
 void View::paintGL()
@@ -87,7 +86,6 @@ void View::paintGL()
     QString title = "PARTICLES TEST      FPS: " + QString::number((int) fps);
     emit changeTitle(title);
 
-    // TODO: call your game rendering code here
     m_app->render();
 }
 
@@ -134,7 +132,6 @@ void View::mouseMoveEvent(QMouseEvent *event)
     float deltaY = (event->y() - halfHeight) / halfHeight;
 
     m_app->mouseMoved(event, deltaX, deltaY);
-
 }
 
 void View::mouseReleaseEvent(QMouseEvent *e)
@@ -153,7 +150,6 @@ void View::keyPressEvent(QKeyEvent *event)
 {
     if (event->key() == Qt::Key_Escape) QApplication::quit();
 
-    // TODO: Handle keyboard presses here
     m_app->keyPressed(event);
 }
 
@@ -168,7 +164,7 @@ void View::tick()
     float seconds = time.restart() * 0.001f;
     fps = .02f / seconds + .98f * fps;
 
-    // TODO: Implement the game update here
+    // update app
     m_app->tick(seconds);
 
     // don't show cursor

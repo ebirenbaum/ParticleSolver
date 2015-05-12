@@ -1,36 +1,43 @@
-#include "particlesystem.h"
-#include "GL/glew.h"
+/*
+ * This class contains the main particle simulation loop.
+ * Calls are made to the GPU to initialize, update, and
+ * eventually terminate the simulation.
+ */
+
+#include <GL/glew.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
-#include <thrust/host_vector.h>
 
 #include <cuda_runtime.h>
 #include <helper_cuda.h>
+#include <thrust/host_vector.h>
 
-///////////////////////////////////////////
-//#include <assert.h>
-//#include <math.h>
-//#include <memory.h>
-//#include <cstdio>
-//#include <cstdlib>
-//#include <algorithm>
-///////////////////////////////////////////
-
-
+#include "particlesystem.h"
 #include "wrappers.cuh"
 #include "kernel.cuh"
 #include "util.cuh"
 #include "shared_variables.cuh"
 #include "helper_math.h"
 
-#include "debugprinting.h"
-
-ParticleSystem::ParticleSystem(uint numParticles, float particleRadius, uint3 gridSize, uint maxParticles, int3 minBounds, int3 maxBounds, int iterations)
+/**
+ * @brief ParticleSystem::ParticleSystem
+ *
+ *     Initializes variable and GPU memory needed
+ *     for the particle simulation
+ *
+ * @param particleRadius
+ * @param gridSize
+ * @param maxParticles
+ * @param minBounds
+ * @param maxBounds
+ * @param iterations
+ */
+ParticleSystem::ParticleSystem(float particleRadius, uint3 gridSize, uint maxParticles, int3 minBounds, int3 maxBounds, int iterations)
     : m_initialized(false),
       m_particleRadius(particleRadius),
       m_maxParticles(maxParticles),
-      m_numParticles(numParticles),
+      m_numParticles(0),
 //      m_dPos(0),
       m_posVbo(0),
       m_cuda_posvbo_resource(0),
@@ -55,24 +62,10 @@ ParticleSystem::ParticleSystem(uint numParticles, float particleRadius, uint3 gr
     float cellSize = m_params.particleRadius * 2.0f;  // cell size equal to particle diameter
     m_params.cellSize = make_float3(cellSize);
 
-    m_params.spring = 0.f;
-    m_params.damping = 0.f;
-    m_params.shear = 0.f;
-    m_params.attraction = 0.f;
-    m_params.boundaryDamping = 0.f;
-//    m_params.spring = 0.5f;
-//    m_params.damping = 0.02f;
-//    m_params.shear = 0.01f;
-//    m_params.attraction = 0.0f;
-//    m_params.boundaryDamping = -0.5f;
-
-//    m_params.gravity = make_float3(0.0f, -.0f, 0.0f);
     m_params.gravity = make_float3(0.0f, -9.8f, 0.0f);
     m_params.globalDamping = 1.0f;
 
-    _init(numParticles, maxParticles);
-
-    mousePos = make_float4(-1);
+    _init(0, maxParticles);
 }
 
 
@@ -87,13 +80,73 @@ inline float frand()
     return rand() / (float) RAND_MAX;
 }
 
-// step the simulation
+
+void ParticleSystem::_init(uint numParticles, uint maxParticles)
+{
+    m_maxParticles = maxParticles;
+    m_numParticles = numParticles;
+    initIntegration();
+
+    /*
+     *  allocate GPU data
+     */
+    uint memSize = sizeof(GLfloat) * 4 * m_maxParticles;
+
+    m_posVbo = createVBO(sizeof(GLfloat) * 4 * m_maxParticles);
+    registerGLBufferObject(m_posVbo, &m_cuda_posvbo_resource);
+
+    // grid and collisions
+    allocateArray((void **)&m_dSortedPos, memSize);
+    allocateArray((void **)&m_dSortedW, m_maxParticles*sizeof(float));
+    allocateArray((void **)&m_dSortedPhase, m_maxParticles*sizeof(int));
+
+    allocateArray((void **)&m_dGridParticleHash, m_maxParticles*sizeof(uint));
+    allocateArray((void **)&m_dGridParticleIndex, m_maxParticles*sizeof(uint));
+
+    allocateArray((void **)&m_dCellStart, m_numGridCells*sizeof(uint));
+    allocateArray((void **)&m_dCellEnd, m_numGridCells*sizeof(uint));
+
+    setParameters(&m_params);
+
+    m_initialized = true;
+}
+
+
+void ParticleSystem::_finalize()
+{
+    assert(m_initialized);
+
+    freeArray(m_dSortedPos);
+    freeArray(m_dSortedW);
+    freeArray(m_dSortedPhase);
+
+    freeArray(m_dGridParticleHash);
+    freeArray(m_dGridParticleIndex);
+    freeArray(m_dCellStart);
+    freeArray(m_dCellEnd);
+
+    unregisterGLBufferObject(m_cuda_posvbo_resource);
+    glDeleteBuffers(1, (const GLuint *)&m_posVbo);
+
+    freeIntegrationVectors();
+    freeSolverVectors();
+    freeSharedVectors();
+}
+
+/**
+ * @brief ParticleSystem::update
+ *
+ *      A single step of the simulation loop.
+ *      Makes calls to extern CUDA functions.
+ *
+ * @param deltaTime - the time (seconds) between this loop and the last one
+ */
 void ParticleSystem::update(float deltaTime)
 {
     assert(m_initialized);
 
+    // avoid large timesteps
     deltaTime = std::min(deltaTime, .05f);
-//    deltaTime = .01f;
 
     if (m_numParticles == 0)
     {
@@ -101,19 +154,22 @@ void ParticleSystem::update(float deltaTime)
         return;
     }
 
+    // get pointer to vbo of point positions
+    // note: this should be changed eventually so the vbo can be
+    // set to render things other than just points
     float *dPos = (float *) mapGLBufferObject(&m_cuda_posvbo_resource);
 
     // update constants
     setParameters(&m_params);
 
-
+    // store current positions then guess
+    // new positions based on forces
     integrateSystem(dPos,
                     deltaTime,
                     m_numParticles);
 
     for (uint i = 0; i < m_solverIterations; i++)
     {
-
         // calculate grid hash
         calcHash(   m_dGridParticleHash,
                     m_dGridParticleIndex,
@@ -121,7 +177,9 @@ void ParticleSystem::update(float deltaTime)
                     m_numParticles);
 
         // sort particles based on hash
-        sortParticles(m_dGridParticleHash, m_dGridParticleIndex, m_numParticles);
+        sortParticles(m_dGridParticleHash,
+                      m_dGridParticleIndex,
+                      m_numParticles);
 
         // reorder particle arrays into sorted order and
         // find start and end of each cell
@@ -137,6 +195,7 @@ void ParticleSystem::update(float deltaTime)
                     m_numParticles,
                     m_numGridCells);
 
+        // find particle neighbors and process collisions
         collide(    dPos,
                     m_dSortedPos,
                     m_dSortedW,
@@ -147,6 +206,8 @@ void ParticleSystem::update(float deltaTime)
                     m_numParticles,
                     m_numGridCells);
 
+        // find neighbors within a specified radius of fluids
+        // and apply fluid constraints
         solveFluids(m_dSortedPos,
                     m_dSortedW,
                     m_dSortedPhase,
@@ -155,29 +216,32 @@ void ParticleSystem::update(float deltaTime)
                     m_dCellEnd,
                     dPos,
                     m_numParticles,
-                    m_numGridCells,
-                    mousePos);
+                    m_numGridCells);
 
+        // apply collision constraints for the world borders
         collideWorld(dPos,
                      m_dSortedPos,
                      m_numParticles,
                      m_minBounds,
                      m_maxBounds);
 
-
+        // apply distance constraints
         solveDistanceConstraints(dPos);
 
+        // apply point constraints
         solvePointConstraints(dPos);
-
     }
 
+    // determine the current position based on distance
+    // travelled during current timestep
     calcVelocity(dPos,
                  deltaTime,
                  m_numParticles);
 
-    // note: do unmap at end here to avoid unnecessary graphics/CUDA context switch
+    // unmap at end here to avoid unnecessary graphics/CUDA context switch
     unmapGLBufferObject(m_cuda_posvbo_resource);
 
+    // add new particles to the scene
     addNewStuff();
 }
 
@@ -227,9 +291,6 @@ void ParticleSystem::addFluids()
     m_colorIndex.push_back(make_int2(start, m_numParticles));
     m_colors.push_back(make_float4(make_float3(color), 1.f));
 }
-
-void ParticleSystem::addFluidBlock()
-{}
 
 
 void ParticleSystem::setParticleToAdd(float3 pos, float3 vel, float mass)
@@ -660,61 +721,5 @@ GLuint ParticleSystem::createVBO(uint size)
     glBufferData(GL_ARRAY_BUFFER, size, 0, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     return vbo;
-}
-
-
-void ParticleSystem::_init(uint numParticles, uint maxParticles)
-{
-    m_maxParticles = maxParticles;
-    m_numParticles = numParticles;
-    initIntegration();
-    initHandles();
-
-    /*
-     *  allocate GPU data
-     */
-    uint memSize = sizeof(GLfloat) * 4 * m_maxParticles;
-
-    m_posVbo = createVBO(sizeof(GLfloat) * 4 * m_maxParticles);
-    registerGLBufferObject(m_posVbo, &m_cuda_posvbo_resource);
-
-    // grid and collisions
-    allocateArray((void **)&m_dSortedPos, memSize);
-    allocateArray((void **)&m_dSortedW, m_maxParticles*sizeof(float));
-    allocateArray((void **)&m_dSortedPhase, m_maxParticles*sizeof(int));
-
-    allocateArray((void **)&m_dGridParticleHash, m_maxParticles*sizeof(uint));
-    allocateArray((void **)&m_dGridParticleIndex, m_maxParticles*sizeof(uint));
-
-    allocateArray((void **)&m_dCellStart, m_numGridCells*sizeof(uint));
-    allocateArray((void **)&m_dCellEnd, m_numGridCells*sizeof(uint));
-
-
-    setParameters(&m_params);
-
-    m_initialized = true;
-}
-
-
-void ParticleSystem::_finalize()
-{
-    assert(m_initialized);
-
-    freeArray(m_dSortedPos);
-    freeArray(m_dSortedW);
-    freeArray(m_dSortedPhase);
-
-    freeArray(m_dGridParticleHash);
-    freeArray(m_dGridParticleIndex);
-    freeArray(m_dCellStart);
-    freeArray(m_dCellEnd);
-
-    unregisterGLBufferObject(m_cuda_posvbo_resource);
-    glDeleteBuffers(1, (const GLuint *)&m_posVbo);
-
-    freeIntegrationVectors();
-    freeSolverVectors();
-    freeSharedVectors();
-    destroyHandles();
 }
 

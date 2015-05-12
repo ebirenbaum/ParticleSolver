@@ -1,3 +1,9 @@
+/*
+ * A CUDA header file for functions compiled with
+ * nvcc (cuda compiler). This allows the functions
+ * to be called from normal .cpp files
+ */
+
 #ifndef WRAPPERS_CUH
 #define WRAPPERS_CUH
 
@@ -64,8 +70,8 @@ extern "C"
     /*
      * SOLVER
      */
-    void initHandles();
-    void destroyHandles();
+//    void initHandles();
+//    void destroyHandles();
 
     void appendSolverParticle(uint numParticles);
 
@@ -87,8 +93,7 @@ extern "C"
                      uint  *cellEnd,
                      float *particles,
                      uint   numParticles,
-                     uint   numCells,
-                     float4 mousePos);
+                     uint   numCells);
 }
 
 #endif // WRAPPERS_CUH

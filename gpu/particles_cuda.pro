@@ -44,7 +44,6 @@ DEPENDPATH += glm src src/ui src/constraints src/rendering src/cuda
 SOURCES += src/main.cpp \
     src/ui/mainwindow.cpp \
     src/ui/view.cpp \
-    src/constraints/distanceconstraint.cpp \
     src/rendering/renderer.cpp \
     src/particleapp.cpp \
     src/particlesystem.cpp \
@@ -54,8 +53,6 @@ SOURCES += src/main.cpp \
 
 HEADERS += src/ui/mainwindow.h \
     src/ui/view.h \
-    src/constraints/constraint.h \
-    src/constraints/distanceconstraint.h \
     src/rendering/renderer.h \
     src/particleapp.h \
     src/particlesystem.h \
@@ -143,7 +140,8 @@ OTHER_FILES +=  src/cuda/wrappers.cuh \
     # prevents warnings from code we didn't write
     QMAKE_CXXFLAGS += -isystem $$CUDA_DIR/include
 
-    LIBS += -lcudart -lcublas -lcusparse -lcurand
+    # required libs
+    LIBS += -lcudart -lcurand #-lcublas -lcusparse
     QMAKE_LFLAGS += -Wl,-rpath,$$CUDA_LIB
     NVCCFLAGS = -Xlinker -rpath,$$CUDA_LIB
 
@@ -163,7 +161,7 @@ OTHER_FILES +=  src/cuda/wrappers.cuh \
     # nvcc error printout format ever so slightly different from gcc
     # http://forums.nvidia.com/index.php?showtopic=171651
 
-    cuda.dependency_type = TYPE_C # there was a typo here. Thanks workmate!
+    cuda.dependency_type = TYPE_C
     cuda.depend_command = $$CUDA_DIR/bin/nvcc -O3 -M $$CUDA_INC $$NVCCFLAGS   ${QMAKE_FILE_NAME}
 
     cuda.input = CUDA_SOURCES

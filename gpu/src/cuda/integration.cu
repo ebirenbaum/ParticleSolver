@@ -458,8 +458,7 @@ extern "C"
                      uint  *cellEnd,
                      float *particles,
                      uint   numParticles,
-                     uint   numCells,
-                     float4 mousePos)
+                     uint   numCells)
     {
         checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
         checkCudaErrors(cudaBindTexture(0, invMassTex, sortedW, numParticles*sizeof(float)));

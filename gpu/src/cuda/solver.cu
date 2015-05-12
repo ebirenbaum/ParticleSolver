@@ -16,8 +16,8 @@
 #include <stdio.h>
 
 
-#include <cublas_v2.h>
-#include <cusparse.h>
+//#include <cublas_v2.h>
+//#include <cusparse.h>
 
 #include "helper_cuda.h"
 #include "solver_kernel.cuh"
@@ -25,9 +25,9 @@
 #include "shared_variables.cuh"
 
 
-cublasHandle_t cublasHandle;
-cusparseHandle_t cusparseHandle;
-cusparseMatDescr_t matDescr;
+//cublasHandle_t cublasHandle;
+//cusparseHandle_t cusparseHandle;
+//cusparseMatDescr_t matDescr;
 
 thrust::device_vector<uint> distsI;
 thrust::device_vector<float> dists;
@@ -43,23 +43,23 @@ thrust::device_vector<uint> occurences;     // number of constraints affecting a
 extern "C"
 {
 
-    void initHandles()
-    {
+//    void initHandles()
+//    {
 
-        checkCudaErrors(cublasCreate(&cublasHandle));
-        checkCudaErrors(cusparseCreate(&cusparseHandle));
+////        checkCudaErrors(cublasCreate(&cublasHandle));
+////        checkCudaErrors(cusparseCreate(&cusparseHandle));
 
-        checkCudaErrors(cusparseCreateMatDescr(&matDescr));
-        cusparseSetMatType(matDescr, CUSPARSE_MATRIX_TYPE_GENERAL);
-        cusparseSetMatIndexBase(matDescr,CUSPARSE_INDEX_BASE_ZERO);
+////        checkCudaErrors(cusparseCreateMatDescr(&matDescr));
+////        cusparseSetMatType(matDescr, CUSPARSE_MATRIX_TYPE_GENERAL);
+////        cusparseSetMatIndexBase(matDescr,CUSPARSE_INDEX_BASE_ZERO);
 
-    }
+//    }
 
-    void destroyHandles()
-    {
-        checkCudaErrors(cublasDestroy(cublasHandle));
-        checkCudaErrors(cusparseDestroy(cusparseHandle));
-    }
+//    void destroyHandles()
+//    {
+////        checkCudaErrors(cublasDestroy(cublasHandle));
+////        checkCudaErrors(cusparseDestroy(cusparseHandle));
+//    }
 
     void appendSolverParticle(uint numParticles)
     {
