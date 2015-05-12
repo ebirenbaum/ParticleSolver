@@ -41,6 +41,7 @@ The following commands may also be useful:
 
 #### GPU demo scenes
 Note: This version of the program no longer uses the CUDA 7 cuSolver library allowing it to be run on CUDA 5 capable machines.
+
 The following demo scenes are built in the GPU application, labeled with appropriate key commands to bring them up:
 
   - *1* - A single rope demonstrating basic distance constraints
