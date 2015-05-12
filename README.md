@@ -40,6 +40,7 @@ The following commands may also be useful:
   - *C* - toggle rendering of individual particles
 
 #### GPU demo scenes
+Note: This version of the program no longer uses the CUDA 7 cuSolver library allowing it to be run on CUDA 5 capable machines.
 The following demo scenes are built in the GPU application, labeled with appropriate key commands to bring them up:
 
   - *1* - A single rope demonstrating basic distance constraints
@@ -51,6 +52,7 @@ The following demo scenes are built in the GPU application, labeled with appropr
   - *7* - A giant ball of fluid being fluidy, and demonstrating surface tension
   - *8* - A combo scene of solid particles, cloths, ropes, and an immovable sphere
   - *9* - Hair...just hair
+  - *0* - Empty scene
 
 Moving around in the scene:
   - *W* - Move forward
