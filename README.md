@@ -68,6 +68,7 @@ Moving around in the scene:
 
 ![](./img/3d1.png)
 ![](./img/3d2.png)
+![](./img/3d3.png)
 ![](./img/2d1.png)
 ![](./img/2d2.png)
 ![](./img/2d3.png)
